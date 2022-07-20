@@ -1,14 +1,17 @@
+#调试，若不需要调试则注释
+CPPFLAGS+=-g
+
 #目标文件从当前目录和VPATH指定子目录中寻找
 OBJ=$(wildcard *.cpp) $(wildcard Server/*.cpp) $(wildcard Log/*.cpp)
 
-all:main 
+all:XWebServer 
 
 submkdir:
 	cd Log && $(MAKE);
 	cd Server && $(MAKE) 
 
-main:submkdir $(OBJ:.cpp=.o)
-	g++ -o main $(OBJ:.cpp=.o) -lpthread
+XWebServer :submkdir $(OBJ:.cpp=.o)
+	g++  -g $(OBJ:.cpp=.o) -lpthread -o  XWebServer 
 
 
 source=$(wildcard *.cpp)
@@ -27,6 +30,6 @@ include $(source:.cpp=.d)
 #伪目标稳健写法，避免出现同名文件
 .PHONY: clean	
 clean:
-	-rm main.d main.o main Log/*.o Server/*.o  *.d*  Log/*.d*  Server/*.d*
+	-rm main.d main.o XWebServer Log/*.o Server/*.o  *.d*  Log/*.d*  Server/*.d*
 
 

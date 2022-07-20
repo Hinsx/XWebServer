@@ -20,7 +20,7 @@ int createEventfd(){
 EventLoop::EventLoop():
 quit_(false),
 thread_(new Thread(std::bind(&EventLoop::loop,this),"")),
-poller_(new Poller),
+poller_(new Poller(true)),
 wakeupFd_(createEventfd()),
 wakeupChannel_(new Channel(this, wakeupFd_)){
     LOG_DEBUG << "EventLoop created " << this << " in thread " << CurrentThread::tid();

@@ -2,6 +2,7 @@
 #include <poll.h>
 #include <iostream>
 #include "EventLoop.h"
+#include"../Log/Logger.h"
 const int Channel::kNoneEvent = 0;
 const int Channel::kReadEvent = POLLIN | POLLPRI;
 const int Channel::kWriteEvent = POLLOUT;
@@ -10,7 +11,8 @@ Channel::Channel(EventLoop *loop, int fd) : loop_(loop),
                                             fd_(fd),
                                             index_(-1),
                                             revent_(0),
-                                            event_(0)
+                                            event_(0),
+                                            tied_(false)
 {
 }
 void Channel::update()
@@ -69,6 +71,7 @@ POLLRDHUP触发条件：需要手动设置event，当 对面close/调用shutdown
 
 void Channel::handleEventWithGuard()
 {
+    LOG_TRACE<<"Ready to process event.";
     //文件描述没有打开
     if (revent_ & POLLNVAL)
     {

@@ -7,8 +7,8 @@
 
 HttpServer::HttpServer(EventLoop *loop, std::string name,bool epoll) : loop_(loop),
                                                                         name_(name),
-                                                                        //localAddr_("127.0.0.1",1234),
-                                                                        localAddr_(9006),
+                                                                        localAddr_("127.0.0.1",1000),
+                                                                        //localAddr_(9006),
                                                                         ipPort_(InetAddress::addrToIpPort(localAddr_)),
                                                                         acceptor(new Acceptor(loop_, localAddr_)),
                                                                         pool_(Threadpool::init(loop_)),
@@ -53,6 +53,10 @@ void HttpServer::newConnnectionCallback(int connfd, InetAddress peerAddr)
     ioLoop->queueInLoop(std::bind(&HttpConnection::connectEstablished, conn));
 }
 void HttpServer::removeConnection(const HttpConnectionPtr &conn)
+{
+    loop_->queueInLoop(std::bind(&HttpServer::removeConnectionInLoop, this, conn));
+}
+void HttpServer::removeConnectionInLoop(const HttpConnectionPtr &conn)
 {
     size_t n = connections_.erase(conn->name());
     EventLoop *ioLoop = conn->getLoop();

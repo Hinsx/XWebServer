@@ -1,3 +1,6 @@
+#调试，若不需要调试则注释
+CPPFLAGS+=-g
+
 OBJ=$(wildcard *.cpp)
 
 all:$(OBJ:.cpp=.o)

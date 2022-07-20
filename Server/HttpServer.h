@@ -38,6 +38,8 @@ public:
     void update(Channel* channel);
     //连接主动关闭后回调此函数
     void removeConnection(const HttpConnectionPtr& conn);
+    //erase连接需要保证临界区（map）的安全
+    void removeConnectionInLoop(const HttpConnectionPtr& conn);
 
     void newConnnectionCallback(int connfd,InetAddress peerAddr);
 

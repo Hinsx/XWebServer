@@ -1,13 +1,15 @@
 #ifndef HTTPCONNECTION_H
 #define HTTPCONNECTION_H
-#include "Channel.h"
 #include "InetAddress.h"
 #include "Buffer.h"
 #include"HttpContext.h"
 
 #include <string>
 #include <memory>
+#include<functional>
 
+class Socket;
+class Channel;
 class EventLoop;
 // http连接，读写数据，解析请求，发起数据库请求，读写数据库等
 //因为连接由shared_ptr管理（在主线程）继承enable_shared_from_this<>类，允许shared_ptr指向this指针（如果直接shared_ptr<this>则会造成两个非共享的shared_ptr指向同一对象）
@@ -77,7 +79,8 @@ private:
     //根据状态处理event
     StateE state_;
 
-    Channel channel_;
+    std::unique_ptr<Channel> channel_;
+    std::unique_ptr<Socket>connfd_;
     Buffer inputBuffer_;
     Buffer outputBuffer_;
     InetAddress peerAddr_;

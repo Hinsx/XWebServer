@@ -1,7 +1,8 @@
 #include "HttpConnection.h"
 #include "HttpResponse.h"
 #include "../Log/Logger.h"
-
+#include"Channel.h"
+#include"Socket.h"
 #include <unistd.h>
 
 HttpConnection::HttpConnection(EventLoop *loop,
@@ -12,17 +13,19 @@ HttpConnection::HttpConnection(EventLoop *loop,
     : loop_(loop),
       name_(nameArg),
       state_(kConnecting),
-      channel_(loop, sockfd),
-      localAddr_(localAddr),
-      peerAddr_(peerAddr)
+      channel_(new Channel(loop, sockfd)),
+      connfd_(new Socket(sockfd)),
+      peerAddr_(peerAddr),
+      localAddr_(localAddr)
+      
 {
-    channel_.setReadCallBack(
+    channel_->setReadCallBack(
         std::bind(&HttpConnection::handleRead, this));
-    channel_.setWriteCallBack(
+    channel_->setWriteCallBack(
         std::bind(&HttpConnection::handleWrite, this));
-    channel_.setCloseCallBack(
+    channel_->setCloseCallBack(
         std::bind(&HttpConnection::handleClose, this));
-    channel_.setErrorCallBack(
+    channel_->setErrorCallBack(
         std::bind(&HttpConnection::handleError, this));
     LOG_DEBUG << "HttpConnection create.[" << name_ << "] at " << this
               << " fd=" << sockfd;
@@ -36,13 +39,13 @@ void HttpConnection::handleError()
 {
     int optval;
     socklen_t optlen = static_cast<socklen_t>(sizeof optval);
-    if (getsockopt(channel_.fd(), SOL_SOCKET, SO_ERROR, &optval, &optlen) < 0)
+    if (getsockopt(channel_->fd(), SOL_SOCKET, SO_ERROR, &optval, &optlen) < 0)
     {
         optval = errno;
     }
     int err = optval;
-    LOG_ERROR << "HttpConnection::handleError [" << name_
-              << "] - SO_ERROR = " << err << " " << strerror_tl(err);
+    // LOG_ERROR << "HttpConnection::handleError [" << name_
+    //           << "] - SO_ERROR = " << err << " " << strerror_tl(err);
 }
 //调用时机
 // 1.客户端（先于服务器）主动关闭写端，收到FIN包，导致read=0，在handleRead调用（此时state_=kConnected)
@@ -50,7 +53,7 @@ void HttpConnection::handleError()
 void HttpConnection::handleClose()
 {
     setState(kDisconnected);
-    channel_.disableAll();
+    channel_->disableAll();
     HttpConnectionPtr guardThis(shared_from_this());
     //此行执行后，连接析构
     closeCallback_(guardThis);
@@ -61,20 +64,17 @@ void HttpConnection::handleClose()
 //不可能，写端挂起（发fin），首先就需要对方写缓冲区全部发出后，再发一个fin报文，若fin先于部分数据到达，因为tcp报文有先后顺序，会先排序再交给应用层，所以fin会等到所有报文数据到达再被读取
 void HttpConnection::handleRead()
 {
-    LOG_TRACE<<"start read--------------";
     int savedErrno = 0;
-    ssize_t n = inputBuffer_.readFd(channel_.fd(), &savedErrno);
+    ssize_t n = inputBuffer_.readFd(channel_->fd(), &savedErrno);
     // std::string post;
     // post.assign(inputBuffer_.peek(),inputBuffer_.readableBytes());
     // LOG_TRACE<<"post is:\n"<<post;
     //读取到报文目前全部数据，执行解析
     if (n > 0)
     {   
-        LOG_TRACE<<"---------Get all post,starting explaining...----------";
         //解析失败，报文格式错误（若是因为报文不完整，n<0，不会进入此分支）
         if (!context_.parseRequest(&inputBuffer_))
         {
-            LOG_TRACE<<"---------bad request...----------";
 
             send("HTTP/1.1 400 Bad Request\r\n\r\n");
             //具体逻辑是什么？
@@ -83,7 +83,6 @@ void HttpConnection::handleRead()
         //解析成功
         if (context_.gotAll())
         {
-            LOG_TRACE<<"---------Explained----------";
 
             const HttpRequest &req = context_.request();
             //获取连接状态（长连接/短连接）
@@ -100,7 +99,7 @@ void HttpConnection::handleRead()
             LOG_DEBUG << "Ready to prepare response. Method=" << req.methodString() << " URL=" << req.path();
 
             //访问首页
-            if (req.path() == "/")
+            if (req.path() == "/"||req.path() == "http://120.76.192.202:9006/")
             {
                 response.setStatusCode(HttpResponse::k200Ok);
                 response.setStatusMessage("OK");
@@ -143,7 +142,7 @@ void HttpConnection::handleRead()
     else
     {
         errno = savedErrno;
-        LOG_SYSERR << "something wrong when reading datas from fd";
+        //LOG_SYSERR << "something wrong when reading datas from fd";
         handleError();
     }
 }
@@ -183,21 +182,22 @@ void HttpConnection::realSend(const char *data, size_t len)
       1.如果outputbuffer中有数据，说明之前写入数据不完全，此时直接写入会乱序
       2.第一个条件有点迷糊？buffer为空不就说明没有未发送的数据吗？
     */
-    if (!channel_.isWriting() && outputBuffer_.readableBytes() == 0)
+    if (!channel_->isWriting() && outputBuffer_.readableBytes() == 0)
     {
         //std::string message;
         //message.assign(data,len);
         //LOG_TRACE<<"------------------The message is:\n"<<message;
 
         // fd是非阻塞的，可以直接尝试write
-        nwrote = write(channel_.fd(), data, len);
-        //如果数据写入（部分）成功，返回0和EWOULDBLOCK的区别？
-        if (nwrote >= 0)
+        nwrote = write(channel_->fd(), data, len);
+        //如果数据写入（部分）成功，0表示对端读端关闭，之后再写会造成EPIPE错误
+        //读端关闭时本机是收不到通知的（写端关闭会收到fin），只能用wirte来发现
+        if (nwrote > 0)
         {
             remaining = len - nwrote;
         }
-        //返回-1，发生错误
-        else // nwrote < 0
+        //返回-1/0，发生错误/对端关闭
+        else 
         {
             nwrote = 0; //相当于写入0字节
             if (errno != EWOULDBLOCK)
@@ -208,21 +208,23 @@ void HttpConnection::realSend(const char *data, size_t len)
                 if (errno == EPIPE || errno == ECONNRESET) // FIXME: any others?
                 {
                     faultError = true;
+                    //对端已经挂起读端，那么我们也没必要再写入了
+                    shutdown();
                 }
             }
         }
     }
 
-    // 1.因为阻塞导致没有完全写入
-    // 2.因为之前数据未发送，此次数据为了避免乱序而没有发送
+    // 1.因为阻塞导致没有完全写入 / 因为之前数据未发送，此次数据为了避免乱序而没有发送
+    // 2.读端未关闭/连接未重置
     if (!faultError && remaining > 0)
     {
         size_t oldLen = outputBuffer_.readableBytes();
         // output buffer的关键作用
         outputBuffer_.append(static_cast<const char *>(data) + nwrote, remaining);
-        if (!channel_.isWriting())
+        if (!channel_->isWriting())
         {
-            channel_.enableWriting();
+            channel_->enableWriting();
         }
     }
 }
@@ -235,9 +237,9 @@ void HttpConnection::shutdown()
     {
         setState(kDisconnecting);
         //若部分数据暂存用户空间，则允许写，等待hanleWrite完成后主动执行挂起
-        if (!channel_.isWriting())
-        {   LOG_TRACE<<"shut down write at "<<channel_.fd();
-            ::shutdown(channel_.fd(), SHUT_WR);
+        if (!channel_->isWriting())
+        {   LOG_TRACE<<"shut down write at "<<channel_->fd();
+            ::shutdown(channel_->fd(), SHUT_WR);
         }
     }
 }
@@ -245,9 +247,9 @@ void HttpConnection::shutdown()
 void HttpConnection::handleWrite()
 {
     //可能等待可写时，客户端关闭，已经执行了handleClose，此时写数据已经没有意义
-    if (channel_.isWriting())
+    if (channel_->isWriting())
     {
-        ssize_t n = write(channel_.fd(), outputBuffer_.peek(), outputBuffer_.readableBytes());
+        ssize_t n = write(channel_->fd(), outputBuffer_.peek(), outputBuffer_.readableBytes());
 
         if (n > 0)
         {
@@ -256,13 +258,13 @@ void HttpConnection::handleWrite()
             {
                 //因为epoll使用了LT模式，既然已经无需写数据，则取消读事件避免busyloop
                 //即使是ET模式也需要此行，否则也会多几次通知（tcp读缓冲区逐渐发送，直到发送结束都会不断通知）
-                channel_.disableWriting();
+                channel_->disableWriting();
 
                 //为什么channel对write感兴趣，连接状态却是disconnecting
                 // shutdown调用因为buffer有数据而放弃挂起写端,现在可以挂起了
                 if (state_ == kDisconnecting)
                 {
-                    ::shutdown(channel_.fd(), SHUT_WR);
+                    ::shutdown(channel_->fd(), SHUT_WR);
                 }
             }
         }
@@ -273,8 +275,8 @@ void HttpConnection::connectEstablished()
     setState(kConnected);
     //为何channel_要用weakptr绑定this？什么时候会出现"在handleEvent时连接析构"的情况？
     // serve主线程调用server析构，将存在的连接逐个删除
-    channel_.tie(shared_from_this());
-    channel_.enableReading();
+    channel_->tie(shared_from_this());
+    channel_->enableReading();
 }
 
 void HttpConnection::connectDestroyed()
@@ -283,7 +285,7 @@ void HttpConnection::connectDestroyed()
     if (state_ == kConnected)
     {
         setState(kDisconnected);
-        channel_.disableAll();
+        channel_->disableAll();
     }
-    channel_.remove();
+    channel_->remove();
 }

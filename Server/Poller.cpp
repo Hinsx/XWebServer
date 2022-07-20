@@ -40,13 +40,14 @@ void Poller::startPoll(int timeoutMs, ActiveChannelList *list)
         // std::cout<<"fds' size:"<<fds.size()<<",start polling...\n";
         LOG_TRACE << "Start polling."
                   << "Event scoure size = " << fds.size();
-        int num = poll(&(fds[0]), fds.size(), timeoutMs);
+        int num = poll(&(*fds.begin()), fds.size(), timeoutMs);
         if (num < 0)
         {
             LOG_ERROR << "Poll error.";
         }
         if (num > 0)
         {
+            LOG_TRACE<<num<<" events happend.Ready to fill.";
             fillActiveChannelList(num, list);
         }
     }
@@ -72,10 +73,12 @@ void Poller::fillActiveChannelList(int num, ActiveChannelList *list)
     if (mode == POLL)
     {
         int counter = 0;
-        for (auto iter = fds.begin(); iter != fds.end() && counter < num; iter++, counter++)
+        for (auto iter = fds.begin(); iter != fds.end() && num>0; iter++)
         {
+            //LOG_TRACE<<"Fd = "<<iter->fd<<",revents = "<<iter->revents;
             if (iter->revents > 0)
             {
+                num--;
                 ChannelMap::iterator it = channels.find(iter->fd);
                 assert(it != channels.end());
                 Channel *channel = it->second;
@@ -109,9 +112,12 @@ void Poller::updateChannel(Channel *channel)
             LOG_TRACE << "Channel " << channel->fd() << " modify.";
             auto iter = channels.find(channel->fd());
             assert(iter != channels.end());
+            assert(channels[channel->fd()] == channel);
             pollfd &pfd = fds[channel->index()];
+            assert(pfd.fd == channel->fd() || pfd.fd == -channel->fd()-1);
             pfd.events = static_cast<short>(channel->event());
             pfd.fd = channel->fd();
+            pfd.revents=0;
             //暂时不感兴趣,不希望监听任何事件
             if (channel->isNoneEvent())
             {
@@ -195,22 +201,34 @@ void Poller::removeChannel(Channel *channel)
     LOG_TRACE<<"remove channel,fd="<<channel->fd();
     if (mode == POLL)
     {
-        int index = channel->index();
         int fd = channel->fd();
         auto iter = channels.find(fd);
         assert(iter != channels.end());
+        assert(channels[channel->fd()] == channel);
+        //先注销再移除(HttpConnection.cpp connectionDestory)
+        assert(channel->isNoneEvent());
+        int index = channel->index();
+        assert(0 <= index && index < static_cast<int>(fds.size()));
         if (static_cast<size_t>(index) == fds.size() - 1)
         {
+            
             fds.pop_back();
         }
         else
         {
             int fdAtEnd = fds.back().fd;
             iter_swap(fds.begin() + index, fds.end() - 1);
+
+            //如果遗漏此判断，将导致段错误，因为channels[fdAtEnd]是空指针
+            if(fdAtEnd<0){
+                fdAtEnd=-fdAtEnd-1;
+            }
+
             channels[fdAtEnd]->set_index(index);
             fds.pop_back();
         }
-        channels.erase(fd);
+        size_t n=channels.erase(fd);
+        assert(n==1);
     }
     if (mode == EPOLL)
     {   

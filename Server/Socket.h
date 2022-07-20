@@ -9,6 +9,9 @@ class Socket{
     static void socketSetNONBLOCK(int fd,bool nonblock);
     //创建一个文件描述符,默认非阻塞
     Socket(bool block=false);
+
+    //根据文件描述符构造
+    explicit Socket(int fd):sockfd(fd){};
     //绑定特定的地址端口
     void sock_bind(sockaddr_in& address);
 
