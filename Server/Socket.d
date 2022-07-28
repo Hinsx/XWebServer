@@ -1,1 +1,2 @@
-Socket.o Socket.d : Socket.cpp Socket.h ../Log/Logger.h ../Log/LogStream.h
+Socket.o Socket.d : Socket.cpp Socket.h ../Log/Logger.h ../Log/LogStream.h \
+ ../Log/../Server/Timestamp.h

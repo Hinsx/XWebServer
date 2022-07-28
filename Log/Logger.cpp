@@ -12,8 +12,10 @@
 //__thread修饰，所有线程各自一份拷贝
 //存储errno信息
 __thread char t_errnobuf[512];
-//__thread char t_time[64];
-//__thread time_t t_lastSecond;
+//存储年月日时分秒，若一秒内多次调用日志，可以减少string拷贝
+__thread char t_time[64];
+//t_time记录的时间（以秒为单位表示）
+__thread time_t t_lastSecond;
 
 const char* strerror_tl(int savedErrno)
 {
@@ -85,15 +87,29 @@ Logger::FlushFunc g_flush = defaultFlush;
 
 
 void Logger::Impl::inputCurrentTime(){
-	char timebuf[32];
-  time_t now= time(NULL);
-  struct tm tm;
-  gmtime_r(&now, &tm); // FIXME: localtime_r ?
-  strftime(timebuf, sizeof timebuf, "%Y-%m-%d %H:%M:%S ", &tm);
-  stream_<<timebuf;
+  long long microSeconds=time_.microSeconds();
+  time_t seconds=static_cast<time_t>(microSeconds/Timestamp::kMicroSecondsPerSecond);
+  int microseconds=static_cast<int>(microSeconds%Timestamp::kMicroSecondsPerSecond);
+	//如果距离上次记录日志已经过了一秒及以上
+  if(seconds!=t_lastSecond){
+    t_lastSecond=seconds;
+    tm tm_time;
+    gmtime_r(&seconds,&tm_time);
+    //记录时间缓存YYYYMMDD hh:mm:ss
+    int len = snprintf(t_time, sizeof(t_time), "%4d%02d%02d %02d:%02d:%02d",
+        tm_time.tm_year + 1900, tm_time.tm_mon + 1, tm_time.tm_mday,
+        tm_time.tm_hour, tm_time.tm_min, tm_time.tm_sec);
+      assert(len == 17);
+  }
+  char buf[32];
+  memset(buf,'\0',sizeof(buf));
+  int m_lenght=snprintf(buf,sizeof(buf),".%06d",microseconds);
+  assert(m_lenght==7);
+  stream_<<T(t_time,17)<<T(buf,7);
 }
 Logger::Impl::Impl(LogLevel level, int savedErrno, const SourceFile& file, int line)
-  : stream_(),
+  : time_(Timestamp::now()),
+    stream_(),
     level_(level),
     line_(line),
     basename_(file)

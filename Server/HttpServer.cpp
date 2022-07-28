@@ -1,22 +1,25 @@
 #include "HttpServer.h"
 #include "Acceptor.h"
 #include "Threadpool.h"
-#include "../Log/Logger.h"
 #include "EventLoop.h"
-#include "HttpConnection.h"
 
-HttpServer::HttpServer(EventLoop *loop, std::string name,bool epoll) : loop_(loop),
+#include<boost/any.hpp>
+
+HttpServer::HttpServer(EventLoop *loop, std::string name,int idleSeconds,bool epoll) : loop_(loop),
                                                                         name_(name),
-                                                                        localAddr_("127.0.0.1",1000),
-                                                                        //localAddr_(9006),
+                                                                        //localAddr_("127.0.0.1",1000),
+                                                                        localAddr_(9006),
                                                                         ipPort_(InetAddress::addrToIpPort(localAddr_)),
                                                                         acceptor(new Acceptor(loop_, localAddr_)),
                                                                         pool_(Threadpool::init(loop_)),
-                                                                        
+                                                                        connectionBuckets_(idleSeconds),
                                                                         nextConnId_(1),
                                                                         epoll_(epoll)
 {
     acceptor->setNewConnectionCallback(std::bind(&HttpServer::newConnnectionCallback, this, std::placeholders::_1, std::placeholders::_2));
+    //每秒执行一次ontimer
+    loop_->runEvery(1.0,std::bind(&HttpServer::onTimer,this));
+    connectionBuckets_.resize(idleSeconds);
     LOG_TRACE << "HttpServer init successfully!";
 }
 HttpServer::~HttpServer()
@@ -47,6 +50,8 @@ void HttpServer::newConnnectionCallback(int connfd, InetAddress peerAddr)
                                               localAddr_,
                                               peerAddr));
     conn->setCloseCallback(std::bind(&HttpServer::removeConnection, this, std::placeholders::_1));
+    conn->setConnectionCallback(std::bind(&HttpServer::onConnection,this,std::placeholders::_1));
+    conn->setMeesageCallback(std::bind(&HttpServer::onMessage,this,std::placeholders::_1));
     connections_[connName] = conn;
 
     LOG_DEBUG << "new connection->[" << peerAddr.toIpPort() << "]";
@@ -61,4 +66,29 @@ void HttpServer::removeConnectionInLoop(const HttpConnectionPtr &conn)
     size_t n = connections_.erase(conn->name());
     EventLoop *ioLoop = conn->getLoop();
     ioLoop->queueInLoop(std::bind(&HttpConnection::connectDestroyed, conn));
+}
+
+void HttpServer::onConnection(const HttpConnectionPtr& conn){
+    EntryPtr entry(new Entry(conn));
+    connectionBuckets_.back().insert(entry);
+    /*将指向这个entry的weakptr保存起来，当连接收到信息时，
+    可以根据weakptr升级为shareptr，保证与entry指向同一个对象。
+    不能保存强引用，否则Entry永远不会被析构也就永远不会调用连接的shutdown，除非连接本身被析构
+    */
+    WeakEntryPtr weakEntry(entry);
+    conn->setWeakEntryPtr(weakEntry);
+}
+
+void HttpServer::onMessage(const HttpConnectionPtr& conn){
+    //boost::any_cast — Custom keyword cast for extracting a value of a given type from an any.
+    WeakEntryPtr weakEntry(boost::any_cast<WeakEntryPtr>(conn->getWeakEntryPtr()));
+    EntryPtr entry(weakEntry.lock());
+    //如果提升失败，说明连接是在超时的情况下收到信息，那就不更新计时
+    if(entry){
+        connectionBuckets_.back().insert(entry);
+    }
+}
+
+void HttpServer::onTimer(){
+    connectionBuckets_.push_back(Bucket());
 }

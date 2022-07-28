@@ -72,6 +72,9 @@ void HttpConnection::handleRead()
     //读取到报文目前全部数据，执行解析
     if (n > 0)
     {   
+        //有数据到来则更新定时器
+        messageCallback_(shared_from_this());
+
         //解析失败，报文格式错误（若是因为报文不完整，n<0，不会进入此分支）
         if (!context_.parseRequest(&inputBuffer_))
         {
@@ -275,8 +278,10 @@ void HttpConnection::connectEstablished()
     setState(kConnected);
     //为何channel_要用weakptr绑定this？什么时候会出现"在handleEvent时连接析构"的情况？
     // serve主线程调用server析构，将存在的连接逐个删除
+    //HttpConnectionPtr conn=shared_from_this();
     channel_->tie(shared_from_this());
     channel_->enableReading();
+    connectionCallback_(shared_from_this());
 }
 
 void HttpConnection::connectDestroyed()

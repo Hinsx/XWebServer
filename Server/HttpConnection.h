@@ -7,6 +7,7 @@
 #include <string>
 #include <memory>
 #include<functional>
+#include<boost/any.hpp>
 
 class Socket;
 class Channel;
@@ -19,6 +20,9 @@ class HttpConnection: public std::enable_shared_from_this<HttpConnection>
     typedef std::shared_ptr<HttpConnection> HttpConnectionPtr;
     typedef std::function<void (const HttpConnection&)> WriteCompleteCallback;
     typedef std::function<void (const HttpConnectionPtr&)> CloseCallback;
+    typedef std::function<void (const HttpConnectionPtr&)> ConnectionCallback;
+    typedef std::function<void (const HttpConnectionPtr&)> MessageCallback;
+    
 public:
     HttpConnection(EventLoop *loop,
                    const std::string &name,
@@ -48,6 +52,18 @@ public:
 
     void setCloseCallback(const CloseCallback& cb){
         closeCallback_=cb;
+    }
+    void setConnectionCallback(const ConnectionCallback& cb){
+        connectionCallback_=cb;
+    }
+    void setMeesageCallback(const MessageCallback& cb){
+        messageCallback_=cb;
+    }
+    void setWeakEntryPtr(const boost::any& ptr){
+        weakEntry_=ptr;
+    }
+    boost::any getWeakEntryPtr()const{
+        return weakEntry_;
     }
     EventLoop* getLoop(){
         return loop_;
@@ -86,11 +102,13 @@ private:
     InetAddress peerAddr_;
     InetAddress localAddr_;
     HttpContext context_;
-
+    boost::any weakEntry_;
     //连接主动调用，要求服务器关闭连接（erase，share_ptr计数归0，连接析构）
     CloseCallback closeCallback_;
-
-    
+    //连接建立后调用，调用server的onConnection函数，用于增加定时器，当此链接超时时踢掉
+    ConnectionCallback connectionCallback_;
+    //handleRead调用，调用server的onMessage函数，用于修改定时器
+    MessageCallback messageCallback_;
 };
 
 #endif

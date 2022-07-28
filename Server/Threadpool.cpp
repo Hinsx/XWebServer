@@ -25,11 +25,11 @@ Threadpool::Threadpool(EventLoop *loop) : loop_(loop),
 void Threadpool::start()
 {
     LOG_INFO<<"The number of thread is "<<maxThreadNumber;
-    if(maxThreadNumber==1){
+    if(maxThreadNumber==0){
         return;
     }
-    loops_.reserve(maxThreadNumber-1);
-    for (int i =0; i < maxThreadNumber-1; i++)
+    loops_.reserve(maxThreadNumber);
+    for (int i =0; i < maxThreadNumber; i++)
     {
         loops_.emplace_back(new EventLoop);
         loops_[i]->startEventLoopThread();

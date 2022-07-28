@@ -2,6 +2,7 @@
 #define XLOGGER_H
 
 #include"LogStream.h"
+#include"../Server/Timestamp.h"
 #include<functional>
 class TimeZone;
 
@@ -88,7 +89,7 @@ class Impl
   //在logger析构时调用此函数，将文件名和行号写入stream_
   void finish();
 
-  //Timestamp time_;
+  Timestamp time_;
   LogStream stream_;
   LogLevel level_;
   int line_;

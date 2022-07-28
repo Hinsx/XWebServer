@@ -3,6 +3,7 @@
 #include"../Log/Logger.h"
 #include"Channel.h"
 #include"Thread.h"
+#include"TimerQueue.h"
 #include <sys/eventfd.h>
 #include<unistd.h>
 
@@ -21,6 +22,7 @@ EventLoop::EventLoop():
 quit_(false),
 thread_(new Thread(std::bind(&EventLoop::loop,this),"")),
 poller_(new Poller(true)),
+timerQueue_(new TimerQueue(this)),
 wakeupFd_(createEventfd()),
 wakeupChannel_(new Channel(this, wakeupFd_)){
     LOG_DEBUG << "EventLoop created " << this << " in thread " << CurrentThread::tid();
@@ -63,7 +65,10 @@ void EventLoop::loop()
   }
   LOG_DEBUG << "EventLoop " << this << " stop looping";
 }
-
+void EventLoop::runEvery(double interval,TimerCallback cb){
+  Timestamp time(addTime(Timestamp::now(),interval));
+  timerQueue_->addTimer(cb,time,interval);
+}
 void EventLoop::doPendingFunctors()
 {
   std::vector<Functor> functors;

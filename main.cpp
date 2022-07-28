@@ -6,13 +6,13 @@
 using namespace std;
 int main(int arg,char** argv){
 
-    Logger::setLogLevel(3);
+    Logger::setLogLevel(0);
     //AsyncLogging logger("debug",3000);
     //logger.start();
     LOG_SYSERR << "something wrong when writing to fd.";
 
     EventLoop loop;
-    Threadpool::set_maxThreadNumber(3);
+    Threadpool::set_maxThreadNumber(0);
     HttpServer server(&loop,"XuanServer");
     server.start();
     loop.loop();
