@@ -17,21 +17,21 @@ public:
   {
     bzero(&addr_, sizeof(addr_));
   }
-  //绑定特定端口，所有网卡的地址
-  InetAddress(int port)
-  {
-    bzero(&addr_, sizeof(sockaddr_in));
-    addr_.sin_family = AF_INET;
-    addr_.sin_port = htons(port);
-    addr_.sin_addr.s_addr = htonl(INADDR_ANY);
-  }
+ 
   //绑定特定地址特定端口
   InetAddress(const char *ip, int port)
   {
     bzero(&addr_, sizeof(sockaddr_in));
     addr_.sin_family = AF_INET;
     addr_.sin_port = htons(port);
-    inet_pton(AF_INET, ip, &addr_.sin_addr);
+    //若ip为空，则绑定所有网卡
+    if(ip==nullptr){
+      addr_.sin_addr.s_addr = htonl(INADDR_ANY);
+    }
+    else{
+      inet_pton(AF_INET, ip, &addr_.sin_addr);
+    }
+    
   }
 
   //获取点分十进制ip

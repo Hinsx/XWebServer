@@ -18,10 +18,10 @@ int createEventfd(){
   return evtfd;    
 }
 
-EventLoop::EventLoop():
+EventLoop::EventLoop(bool epoll):
 quit_(false),
 thread_(new Thread(std::bind(&EventLoop::loop,this),"")),
-poller_(new Poller(true)),
+poller_(new Poller(epoll)),
 timerQueue_(new TimerQueue(this)),
 wakeupFd_(createEventfd()),
 wakeupChannel_(new Channel(this, wakeupFd_)){

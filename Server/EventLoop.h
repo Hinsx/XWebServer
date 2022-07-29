@@ -21,7 +21,7 @@ class EventLoop{
     typedef std::function<void()> Functor;
     typedef std::function<void()> TimerCallback;
     public:
-    EventLoop();
+    EventLoop(bool epoll=true);
     void startEventLoopThread();
     ~EventLoop();
     //若当前调用函数的线程是创建loop的线程，则返回true

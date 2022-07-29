@@ -5,16 +5,15 @@
 
 #include<boost/any.hpp>
 
-HttpServer::HttpServer(EventLoop *loop, std::string name,int idleSeconds,bool epoll) : loop_(loop),
+HttpServer::HttpServer(EventLoop *loop, std::string name,const char* ip,int port,int idleSeconds) : loop_(loop),
                                                                         name_(name),
                                                                         //localAddr_("127.0.0.1",1000),
-                                                                        localAddr_(9006),
+                                                                        localAddr_(ip,port),
                                                                         ipPort_(InetAddress::addrToIpPort(localAddr_)),
                                                                         acceptor(new Acceptor(loop_, localAddr_)),
                                                                         pool_(Threadpool::init(loop_)),
                                                                         connectionBuckets_(idleSeconds),
-                                                                        nextConnId_(1),
-                                                                        epoll_(epoll)
+                                                                        nextConnId_(1)
 {
     acceptor->setNewConnectionCallback(std::bind(&HttpServer::newConnnectionCallback, this, std::placeholders::_1, std::placeholders::_2));
     //每秒执行一次ontimer

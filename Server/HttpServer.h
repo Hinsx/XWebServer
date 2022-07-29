@@ -61,7 +61,7 @@ class HttpServer
 
 public:
     //初始化服务器,默认使用poll模式进行监听
-    HttpServer(EventLoop *loop, std::string name, int idleSeconds=5,bool epoll = true);
+    HttpServer(EventLoop *loop, std::string name, const char* ip,int port,int idleSeconds);
     ~HttpServer();
     //服务器启动
     void start();
@@ -101,8 +101,6 @@ private:
     WeakConnectionList connectionBuckets_;
     //连接id，标识连接用于映射
     int nextConnId_;
-    // IO复用模式
-    bool epoll_ = false;
 
     //智能指针处理连接
     HttpConnectionMap connections_;

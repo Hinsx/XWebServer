@@ -3,17 +3,21 @@
 #include"Server/EventLoop.h"
 #include"Log/Logger.h"
 #include"Log/AsyncLogging.h"
+#include"Config.h"
 using namespace std;
-int main(int arg,char** argv){
+int main(int argc,char** argv){
 
-    Logger::setLogLevel(0);
-    //AsyncLogging logger("debug",3000);
-    //logger.start();
-    LOG_SYSERR << "something wrong when writing to fd.";
+    Config config;
+    config.parse_arg(argc,argv);
 
-    EventLoop loop;
-    Threadpool::set_maxThreadNumber(0);
-    HttpServer server(&loop,"XuanServer");
+    Logger::setLogLevel(config.loglevel());
+    if(config.asynclog()){
+        AsyncLogging logger("debug",3000);
+        logger.start();        
+    }
+    EventLoop loop(config.useEpoll());
+    Threadpool::set_maxThreadNumber(config.getThreadNum());
+    HttpServer server(&loop,config.serverName(),config.serverIP(),config.port(),config.idle());
     server.start();
     loop.loop();
     return 0;
