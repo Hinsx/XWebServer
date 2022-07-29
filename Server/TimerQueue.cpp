@@ -82,9 +82,8 @@ void TimerQueue::handleRead(){
 std::vector<TimerQueue::Entry>TimerQueue::getExpired(Timestamp now){
     std::vector<Entry>expired;
     //通过二分upper_bound寻找最后一个超时的(包括=now)定时器，以其为结尾将set中的超时定时器取出
-    //TimerPtr timerptr=std::make_shared<Timer>(new Timer);
-    //Entry sentry(now,reinterpret_cast<Timer*>(UINTPTR_MAX));
-    Entry sentry(now,new Timer);
+    Timer tmp;
+    Entry sentry(now,TimerPtr(&tmp,[](Timer* ptr){}));
     TimerList::iterator end=timers_.upper_bound(sentry);
     assert(end == timers_.end() || now < end->first);
     //使用back_inserter不必事先知道要复制的元素数量,这会顺带复制shareptr
