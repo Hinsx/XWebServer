@@ -79,7 +79,7 @@ public:
     {
         pthread_cond_wait(&pcond_, mutex_.getMutex());
     }
-    void waitForSeconds(int timeout)
+    void waitForSeconds(double timeout)
     {
         /*
         获取系统启动时到现在经过的秒和微妙，计算到期时间的秒和微秒，设置条件变量使用CLOCK_MONOTONIC

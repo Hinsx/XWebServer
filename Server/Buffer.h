@@ -30,6 +30,7 @@ public:
     {
     }
 
+
     size_t readableBytes() const
     {
         return writerIndex_ - readerIndex_;
@@ -357,7 +358,7 @@ private:
     //小优化，避免vector重新分配空间
     void makeSpace(size_t len)
     {
-        if (writableBytes() + prependableBytes() < len + kPreBytes)
+        if (writableBytes() + prependableBytes() - kPreBytes< len )
         {
             // FIXME: move readable data
             buffer_.resize(writerIndex_ + len);

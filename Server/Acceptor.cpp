@@ -16,6 +16,8 @@ listen_fd(),//创建非阻塞监听fd
 channel_(loop,listen_fd.fd()),
 idleFd_(open("/dev/null", O_RDONLY | O_CLOEXEC))
 {
+    int flag=1;
+    setsockopt(listen_fd.fd(), SOL_SOCKET, SO_REUSEADDR, &flag, sizeof(flag));
     listen_fd.sock_bind(addr_.getAddr());
     channel_.setReadCallBack(std::bind(&Acceptor::accept,this));
     channel_.enableReading();
@@ -52,6 +54,7 @@ void Acceptor::accept(){
             idleFd_=open("/dev/null", O_RDONLY | O_CLOEXEC);
         }
     }
+    
     else{
         LOG_TRACE << "Acceptor get new connection.";
         newConnectionCallback_(connfd,peerAddr);

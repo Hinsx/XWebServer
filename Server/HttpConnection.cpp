@@ -1,10 +1,194 @@
 #include "HttpConnection.h"
 #include "HttpResponse.h"
 #include "../Log/Logger.h"
-#include"Channel.h"
-#include"Socket.h"
+#include "Channel.h"
+#include "Socket.h"
+#include "SQLConnection.h"
 #include <unistd.h>
+#include <sys/stat.h>
 
+extern const char* FILE_PATH;
+
+//根据文件后缀设置相应的content-type
+void setContentType(HttpResponse &response,const string& filename)
+{
+    int begin=filename.find_last_of ('.', filename.length()-1);
+    const char* postorder=filename.c_str()+begin+1;
+    if(strcmp(postorder,"html")==0)
+    {
+        response.setContentType("text/html; charset=utf-8");
+    }
+    else if(strcmp(postorder,"jpg")==0)
+    {
+        response.setContentType("image/jpeg");
+    }
+    else if(strcmp(postorder,"png")==0)
+    {
+        response.setContentType("image/png");
+    }
+}
+//请求文件
+void acquireFile(HttpResponse &response,std::string& filename)
+{
+    //检查访问的文件的属性
+    struct stat buf;
+
+    //文件或目录不存在
+    if(stat(filename.c_str(), &buf)<0)
+    {
+        response.setStatusCode(HttpResponse::k404NotFound);
+        response.setStatusMessage("NotFound");
+    }
+    //文件或目录不允许其他人读取(只有root可读)
+    else if(!(buf.st_mode & S_IROTH))
+    {
+        response.setStatusCode(HttpResponse::k403ForBidden);
+        response.setStatusMessage("ForBidden");
+    }
+
+    //访问路径是一个目录
+    else if(S_ISDIR(buf.st_mode))
+    {
+        response.setStatusCode(HttpResponse::k400BadRequest);
+        response.setStatusMessage("BadRequest");
+    }
+    //正常访问
+    else
+    {
+        response.setStatusCode(HttpResponse::k200Ok);
+        response.setStatusMessage("OK");
+        //response.setContentType("image/jpeg");
+        setContentType(response,filename);
+        response.addHeader("Server", "xWebServer");
+        //读取文件到body
+        FILE* file=fopen(filename.c_str(),"rb");
+        char tmp[4096];
+        string body;
+        while(!feof(file))
+        {
+            memset(tmp,'\0',sizeof(tmp));
+            size_t n=fread(tmp,sizeof(char),sizeof(tmp)-1,file);
+            response.appendToBody(tmp,n);
+        }
+        fclose(file);
+    }
+}
+
+//处理GET请求
+void handleGET(const HttpRequest &req, HttpResponse &response)
+{
+    //访问的文件
+    std::string filename(FILE_PATH);
+    //访问首页
+    if (req.path() == "/" || req.path() == "http://120.76.192.202:9006/")
+    {
+        filename+="/login.html";
+    }
+    else
+    {
+        filename+=req.path();
+    }
+    acquireFile(response,filename);
+}
+//处理POST请求
+void handlePOST(const HttpRequest &req, HttpResponse &response)
+{
+    //注册活动,输入用户名和密码
+    if (req.path() == "/registe")
+    {
+        MYSQL_RES *result;
+        int row = -1;
+        {
+            Query query;
+            if (query.getConnection())
+            {
+                row = query.query(result, "SELECT user_name FROM users WHERE user_name='" + req.getValueByKey("name") + "';");
+                //注册的用户不存在，可以注册
+                if (row == 0)
+                {
+                    query.query(result, "INSERT INTO users (user_name,user_passwd) VALUES ('" + req.getValueByKey("name") + "','" + req.getValueByKey("password") + "');");
+                }
+            }
+        }
+        //系统繁忙，无法获取数据库连接
+        if (row == -1)
+        {
+            response.setStatusCode(HttpResponse::k503ServiceUnavailable);
+            response.setStatusMessage("Service Unavailable");
+        }
+        //已执行注册，返回登录界面
+        else if (row == 0)
+        {
+            response.setStatusCode(HttpResponse::k200Ok);
+            response.setStatusMessage("OK");
+            response.setContentType("text/plain");
+            response.addHeader("Server", "xWebServer");
+            response.setBody("Registe successfully.");
+        }
+        //注册的用户已经存在，返回提醒
+        else if (row > 0)
+        {
+            response.setStatusCode(HttpResponse::k200Ok);
+            response.setStatusMessage("OK");
+            response.setContentType("text/plain");
+            response.addHeader("Server", "xWebServer");
+            response.setBody("The username has been registed! Try another one please.");
+        }
+    }
+    //登录活动
+    else if (req.path() == "/login")
+    {
+        MYSQL_RES *result=NULL;
+        int row = -1;
+        {
+            Query query;
+            if (query.getConnection())
+            {
+                row = query.query(result, "SELECT user_name FROM users WHERE user_name='" + req.getValueByKey("name") + "' AND user_passwd='" + req.getValueByKey("password") + "';");
+            }
+        }
+
+        //系统繁忙，无法获取数据库连接
+        if (row == -1)
+        {
+            response.setStatusCode(HttpResponse::k503ServiceUnavailable);
+            response.setStatusMessage("Service Unavailable");            
+        }
+        //不存在此用户，检查用户名或者密码
+        else if (row == 0)
+        {
+           response.setStatusCode(HttpResponse::k200Ok);
+           response.setStatusMessage("OK");
+           response.setContentType("text/plain");
+           response.addHeader("Server", "xWebServer");
+           response.setBody("{\"status\":\"Wrong with name or password.\"}");  
+        }
+        //登录的用户存在
+        else if (row > 0)
+        {
+            assert(row==1);
+            
+           response.setStatusCode(HttpResponse::k200Ok);
+           response.setStatusMessage("OK");
+           response.setContentType("text/plain");
+           response.addHeader("Server", "xWebServer");
+           response.setBody("{\"status\":\"success\",\"path\":\"/judge.html\"}");           
+        }
+    }
+}
+
+//处理各种请求
+void handleReq(const HttpRequest &req, HttpResponse &response)
+{
+    if (req.methodString() == "GET")
+    {
+        handleGET(req, response);
+    }
+    else if (req.methodString() == "POST")
+    {
+        handlePOST(req, response);
+    }
+}
 HttpConnection::HttpConnection(EventLoop *loop,
                                const string &nameArg,
                                int sockfd,
@@ -17,7 +201,7 @@ HttpConnection::HttpConnection(EventLoop *loop,
       connfd_(new Socket(sockfd)),
       peerAddr_(peerAddr),
       localAddr_(localAddr)
-      
+
 {
     channel_->setReadCallBack(
         std::bind(&HttpConnection::handleRead, this));
@@ -66,15 +250,13 @@ void HttpConnection::handleRead()
 {
     int savedErrno = 0;
     ssize_t n = inputBuffer_.readFd(channel_->fd(), &savedErrno);
-    // std::string post;
-    // post.assign(inputBuffer_.peek(),inputBuffer_.readableBytes());
-    // LOG_TRACE<<"post is:\n"<<post;
+    
     //读取到报文目前全部数据，执行解析
     if (n > 0)
-    {   
+    {
         //有数据到来则更新定时器
         messageCallback_(shared_from_this());
-
+        printf("%s",inputBuffer_.peek());
         //解析失败，报文格式错误（若是因为报文不完整，n<0，不会进入此分支）
         if (!context_.parseRequest(&inputBuffer_))
         {
@@ -99,33 +281,17 @@ void HttpConnection::handleRead()
 
             //准备回复报文
             HttpResponse response(close);
-            LOG_DEBUG << "Ready to prepare response. Method=" << req.methodString() << " URL=" << req.path();
+            LOG_TRACE << "Ready to prepare response. Method=" << req.methodString() << " URL=" << req.path();
 
-            //访问首页
-            if (req.path() == "/"||req.path() == "http://120.76.192.202:9006/")
-            {
-                response.setStatusCode(HttpResponse::k200Ok);
-                response.setStatusMessage("OK");
-                response.setContentType("text/html");
-                response.addHeader("Server", "xWebServer");
-                //考虑用零拷贝
-                response.setBody("<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>This is title</title></head><body><h1>Hello</h1>Welcome to xWebserver</body></html>");
-            }
-
-            //不支持访问其他文件
-            else
-            {
-                response.setStatusCode(HttpResponse::k404NotFound);
-                response.setStatusMessage("Not Found");
-                response.setCloseConnection(true);
-            }
+            //填充报文
+            handleReq(req, response);
 
             //创建临时buffer，若无法全部传入socket缓冲再保存至连接的output buffer
             Buffer buf;
             response.appendToBuffer(&buf);
             send(&buf);
 
-            //如果是短连接，或者访问不存在的资源，则关闭
+            //如果是短连接
             if (response.closeConnection())
             {
                 //如果send的部分数据存在buffer呢？
@@ -138,14 +304,14 @@ void HttpConnection::handleRead()
     // POLLRDHUP
     else if (n == 0)
     {
-        LOG_TRACE<<"Peer shut write down.";
+        LOG_TRACE << "Peer shut write down.";
         handleClose();
     }
     //发生错误(不是EAGAIN这类错误，因为通知有数据到达)
     else
     {
         errno = savedErrno;
-        //LOG_SYSERR << "something wrong when reading datas from fd";
+        // LOG_SYSERR << "something wrong when reading datas from fd";
         handleError();
     }
 }
@@ -174,12 +340,6 @@ void HttpConnection::realSend(const char *data, size_t len)
     //剩余未发送数据的长度
     size_t remaining = len;
     bool faultError = false;
-    //在进入realsend之前已经判断过状态（connected）了，为何还要判断呢？
-    if (state_ == kDisconnected)
-    {
-        LOG_WARN << "disconnected, give up writing";
-        return;
-    }
     /*
       直接尝试向缓冲区写入数据，需要注意避免乱序发送
       1.如果outputbuffer中有数据，说明之前写入数据不完全，此时直接写入会乱序
@@ -187,9 +347,9 @@ void HttpConnection::realSend(const char *data, size_t len)
     */
     if (!channel_->isWriting() && outputBuffer_.readableBytes() == 0)
     {
-        //std::string message;
-        //message.assign(data,len);
-        //LOG_TRACE<<"------------------The message is:\n"<<message;
+        // std::string message;
+        // message.assign(data,len);
+        // LOG_TRACE<<"------------------The message is:\n"<<message;
 
         // fd是非阻塞的，可以直接尝试write
         nwrote = write(channel_->fd(), data, len);
@@ -200,7 +360,7 @@ void HttpConnection::realSend(const char *data, size_t len)
             remaining = len - nwrote;
         }
         //返回-1/0，发生错误/对端关闭
-        else 
+        else
         {
             nwrote = 0; //相当于写入0字节
             if (errno != EWOULDBLOCK)
@@ -241,7 +401,8 @@ void HttpConnection::shutdown()
         setState(kDisconnecting);
         //若部分数据暂存用户空间，则允许写，等待hanleWrite完成后主动执行挂起
         if (!channel_->isWriting())
-        {   LOG_TRACE<<"shut down write at "<<channel_->fd();
+        {
+            LOG_TRACE << "shut down write at " << channel_->fd();
             ::shutdown(channel_->fd(), SHUT_WR);
         }
     }
@@ -278,7 +439,7 @@ void HttpConnection::connectEstablished()
     setState(kConnected);
     //为何channel_要用weakptr绑定this？什么时候会出现"在handleEvent时连接析构"的情况？
     // serve主线程调用server析构，将存在的连接逐个删除
-    //HttpConnectionPtr conn=shared_from_this();
+    // HttpConnectionPtr conn=shared_from_this();
     channel_->tie(shared_from_this());
     channel_->enableReading();
     connectionCallback_(shared_from_this());

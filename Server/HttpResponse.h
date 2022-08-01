@@ -21,8 +21,12 @@ class HttpResponse {
     k301MovedPermanently = 301,
     //请求本身格式出错
     k400BadRequest = 400,
+    //无权访问此资源
+    k403ForBidden = 403,
     //访问的资源不存在
     k404NotFound = 404,
+    //服务器超载中
+    k503ServiceUnavailable=503,
   };
 
   explicit HttpResponse(bool close)
@@ -52,6 +56,14 @@ class HttpResponse {
 
   void setBody(const std::string& body)
   { body_ = body; }
+  void appendToBody(const char* body,size_t len)
+  {
+    //body_ .append(body,len);
+    int sizea=body_.size();
+    body_ .append(body,len);
+    int sizeb=body_.size();
+    int reallen=sizeb-sizea;
+  }
 
   void appendToBuffer(Buffer* output) const;
 

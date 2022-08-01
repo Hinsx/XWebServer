@@ -11,7 +11,7 @@ submkdir:
 	cd Server && $(MAKE) 
 
 XWebServer :submkdir $(OBJ:.cpp=.o)
-	g++  -g $(OBJ:.cpp=.o) -lpthread -o  XWebServer 
+	g++  -g $(OBJ:.cpp=.o) -lpthread -lmysqlclient -o  XWebServer 
 
 
 source=$(wildcard *.cpp)

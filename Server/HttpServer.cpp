@@ -2,10 +2,10 @@
 #include "Acceptor.h"
 #include "Threadpool.h"
 #include "EventLoop.h"
-
+#include "SQLpool.h"
 #include<boost/any.hpp>
 
-HttpServer::HttpServer(EventLoop *loop, std::string name,const char* ip,int port,int idleSeconds) : loop_(loop),
+HttpServer::HttpServer(EventLoop *loop, std::string name,const char* ip,int port,int idleSeconds,int maxConnectionNums) : loop_(loop),
                                                                         name_(name),
                                                                         //localAddr_("127.0.0.1",1000),
                                                                         localAddr_(ip,port),
@@ -13,7 +13,8 @@ HttpServer::HttpServer(EventLoop *loop, std::string name,const char* ip,int port
                                                                         acceptor(new Acceptor(loop_, localAddr_)),
                                                                         pool_(Threadpool::init(loop_)),
                                                                         connectionBuckets_(idleSeconds),
-                                                                        nextConnId_(1)
+                                                                        nextConnId_(1),
+                                                                        maxConnectionNums_(maxConnectionNums)
 {
     acceptor->setNewConnectionCallback(std::bind(&HttpServer::newConnnectionCallback, this, std::placeholders::_1, std::placeholders::_2));
     //每秒执行一次ontimer
@@ -30,31 +31,41 @@ void HttpServer::start()
     LOG_TRACE << "HttpServer " << name_ << " start.";
 
     pool_->start();
-
+    SQLpool::getInstance();
     acceptor->listen();
 }
 void HttpServer::newConnnectionCallback(int connfd, InetAddress peerAddr)
 {
-    LOG_TRACE << "New connection came.Connfd = " << connfd;
-    EventLoop *ioLoop = pool_->getNextLoop();
-    //构造连接名称（key）
-    char buf[64];
-    snprintf(buf, sizeof buf, "-%s#%d", ipPort_.c_str(), nextConnId_);
-    ++nextConnId_;
-    string connName = name_ + buf;
+    if(connections_.size()<maxConnectionNums_)
+    {
+        LOG_TRACE << "New connection came.Connfd = " << connfd;
+        EventLoop *ioLoop = pool_->getNextLoop();
+        //构造连接名称（key）
+        char buf[64];
+        snprintf(buf, sizeof buf, "-%s#%d", ipPort_.c_str(), nextConnId_);
+        ++nextConnId_;
+        string connName = name_ + buf;
 
-    HttpConnectionPtr conn(new HttpConnection(ioLoop,
-                                              connName,
-                                              connfd,
-                                              localAddr_,
-                                              peerAddr));
-    conn->setCloseCallback(std::bind(&HttpServer::removeConnection, this, std::placeholders::_1));
-    conn->setConnectionCallback(std::bind(&HttpServer::onConnection,this,std::placeholders::_1));
-    conn->setMeesageCallback(std::bind(&HttpServer::onMessage,this,std::placeholders::_1));
-    connections_[connName] = conn;
+        HttpConnectionPtr conn(new HttpConnection(ioLoop,
+                                                connName,
+                                                connfd,
+                                                localAddr_,
+                                                peerAddr));
+        conn->setCloseCallback(std::bind(&HttpServer::removeConnection, this, std::placeholders::_1));
+        conn->setConnectionCallback(std::bind(&HttpServer::onConnection,this,std::placeholders::_1));
+        conn->setMeesageCallback(std::bind(&HttpServer::onMessage,this,std::placeholders::_1));
+        connections_[connName] = conn;
 
-    LOG_DEBUG << "new connection->[" << peerAddr.toIpPort() << "]";
-    ioLoop->queueInLoop(std::bind(&HttpConnection::connectEstablished, conn));
+        LOG_DEBUG << "new connection->[" << peerAddr.toIpPort() << "]";
+        ioLoop->queueInLoop(std::bind(&HttpConnection::connectEstablished, conn));        
+    }
+    //关闭连接
+    else
+    {
+        LOG_INFO<<"Too many connections.";
+        close(connfd);
+    }
+
 }
 void HttpServer::removeConnection(const HttpConnectionPtr &conn)
 {

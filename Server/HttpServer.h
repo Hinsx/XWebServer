@@ -61,7 +61,7 @@ class HttpServer
 
 public:
     //初始化服务器,默认使用poll模式进行监听
-    HttpServer(EventLoop *loop, std::string name, const char* ip,int port,int idleSeconds);
+    HttpServer(EventLoop *loop, std::string name, const char* ip,int port,int idleSeconds,int maxConnectionNums);
     ~HttpServer();
     //服务器启动
     void start();
@@ -74,7 +74,8 @@ public:
 
     void newConnnectionCallback(int connfd, InetAddress peerAddr);
 
-    /*定时器超时回调，新增bucket到尾部，若到达长度上限则弹出头部元素，
+    /*
+    定时器超时回调，新增bucket到尾部，若到达长度上限则弹出头部元素，
     造成entryptr析构,此举又会导致内存堆中entry析构（若计数为0），调用连接shutdown
     */
     void onTimer();
@@ -101,6 +102,8 @@ private:
     WeakConnectionList connectionBuckets_;
     //连接id，标识连接用于映射
     int nextConnId_;
+    //最大连接数量
+    int maxConnectionNums_;
 
     //智能指针处理连接
     HttpConnectionMap connections_;

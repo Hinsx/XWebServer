@@ -17,6 +17,7 @@ void HttpResponse::appendToBuffer(Buffer* output) const
   }
   else
   {
+    //静态页面，直接根据body计算出大小
     snprintf(buf, sizeof buf, "Content-Length: %zd\r\n", body_.size());
     output->append(buf);
     output->append("Connection: keep-alive\r\n");

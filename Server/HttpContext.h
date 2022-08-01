@@ -15,8 +15,7 @@ class HttpContext
   {
     kExpectRequestLine,
     kExpectHeaders,
-    //暂不支持GET之外的请求
-    //kExpectBody,
+    kExpectBody,
     kGotAll,
   };
 

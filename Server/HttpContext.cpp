@@ -23,7 +23,8 @@ bool HttpContext::processRequestLine(const char* begin, const char* end)
       if (question != space)
       {
         request_.setPath(start, question);
-        request_.setQuery(question, space);
+        request_.setQuery(question+1, space);
+        request_.parseQuery();
       }
       else
       {
@@ -86,6 +87,7 @@ bool HttpContext::parseRequest(Buffer* buf)
     //当前需要解析请求头
     else if (state_ == kExpectHeaders)
     {
+      //首先找到一个请求头的末尾
       const char* crlf = buf->findCRLF();
       if (crlf)
       {
@@ -96,21 +98,42 @@ bool HttpContext::parseRequest(Buffer* buf)
         }
         else
         {
-          state_ = kGotAll;
-          hasMore = false;
+          //get请求直接忽略报文体，解析成功
+          if(request_.methodString()=="GET"){
+            state_=kGotAll;
+            hasMore=false;
+          }
+          state_ = kExpectBody;
         }
         //只有找到回车换行（找到一个头部字段），readerIndex才会移动
         buf->retrieveUntil(crlf + 2);
       }
+      //这个分支一般不会进入，除非只有一个状态行（比如报文只有短短的"GET URL HTTP1.0\r\n")
       else
       {
         hasMore = false;
       }
     }
-    // else if (state_ == kExpectBody)
-    // {
-    //   //暂不支持GET之外的请求
-    // }
+    //解析报文体,根据content-lenght字段解析报文体
+    else if (state_ == kExpectBody)
+    {
+      //计算包体的长度
+      const std::string& lenght_str=request_.getHeader("Content-Length");
+      int lenght=0;
+      if(!lenght_str.empty())
+      {
+        lenght=atoi(lenght_str.c_str());
+      }
+      //当接收的数据达到包体长度
+      if(buf->readableBytes()>=lenght)
+      {
+        request_.setBody(buf->peek(),buf->peek()+lenght);
+        buf->retrieve(lenght);
+        request_.parseBody();
+        hasMore=false;
+        state_=kGotAll;
+      }
+    }
   }
   return ok;
 }
