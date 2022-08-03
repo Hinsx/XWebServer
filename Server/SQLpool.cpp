@@ -3,8 +3,8 @@
 #include"../Log/Logger.h"
 using std::string;
 
-int SQLpool::maxConnNums_ = 5;
-int SQLpool::minConnNums_ = 2;
+int SQLpool::maxConnectionNums_ = 5;
+int SQLpool::ConnectionNums_ ;
 string SQLpool::host_="127.0.0.1";
 string SQLpool::user_="root";
 string SQLpool::passwd_="123";
@@ -12,7 +12,7 @@ string SQLpool::db_name_="myweb";
 
 SQLpool::SQLpool() : cond(mutex)
 {
-    for (int i = minConnNums_; i >= 0; i--)
+    for (int i = ConnectionNums_; i >= 0; i--)
     {
         conns_.push_back(new SQLConnection(host_, user_, passwd_, db_name_));
     }
@@ -53,7 +53,7 @@ void SQLpool::releaseConnection(SQLConnection *conn)
 
 SQLpool::~SQLpool()
 {
-    for (int i = minConnNums_; i >= 0; i--)
+    for (int i = ConnectionNums_; i >= 0; i--)
     {
         SQLConnection *conn = conns_.back();
         delete conn;

@@ -8,6 +8,7 @@
 #include <memory>
 #include<functional>
 #include<boost/any.hpp>
+#include<list>
 
 class Socket;
 class Channel;
@@ -46,7 +47,8 @@ public:
         send(message,strlen(message));
     }
     void send(const char *message, size_t len);
-    void send(Buffer *message);
+    //void send(Buffer *message);
+    void send(SendMsg* message);
 
     void shutdown();
 
@@ -89,7 +91,8 @@ private:
     void handleClose();
     void handleError();
 
-    void realSend(const char*,size_t);
+    //void realSend(const char*,size_t);
+    void realSend(SendMsg* message);
     EventLoop *loop_;
     const std::string name_;
     //根据状态处理event
@@ -98,7 +101,9 @@ private:
     std::unique_ptr<Channel> channel_;
     std::unique_ptr<Socket>connfd_;
     Buffer inputBuffer_;
+    //实现零拷贝传输
     Buffer outputBuffer_;
+    std::list<SendMsg> tmpBuffer_;
     InetAddress peerAddr_;
     InetAddress localAddr_;
     HttpContext context_;

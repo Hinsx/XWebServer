@@ -10,14 +10,10 @@
 class SQLConnection;
 class SQLpool{
     public:
-    //设置连接池的上限
-    static void setPoolMaxSize(int num){
-        maxConnNums_=num<=5?num:5;
-
-    }
-    //设置连接池的下限void
-    static void setPoolMinSize(int num){
-        minConnNums_=num>=2?num:2;
+    //设置连接池大小
+    static void setPoolSize(int num){
+        num=num>0?(num>maxConnectionNums_?maxConnectionNums_:num):1;
+        ConnectionNums_=num;
     }
     //设置连接参数
     static void setConnectArg(std::string host,std::string user,std::string passwd,std::string db_name){
@@ -45,8 +41,8 @@ class SQLpool{
     MutexLock mutex;
     Condition cond;
 
-    static int maxConnNums_;
-    static int minConnNums_;
+    static int maxConnectionNums_;
+    static int ConnectionNums_;
     static std::string host_;
     static std::string user_;
     static std::string passwd_;

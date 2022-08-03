@@ -1,0 +1,119 @@
+<!DOCTYPE HTML>
+<!--
+	Dimension by HTML5 UP
+	html5up.net | @ajlkn
+	Free for personal and commercial use under the CCA 3.0 license (html5up.net/license)
+-->
+<html>
+
+<head>
+	<title>放弃音乐</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+	<link rel="stylesheet" href="assets/css/main.css" />
+	<noscript>
+		<link rel="stylesheet" href="assets/css/noscript.css" />
+	</noscript>
+</head>
+
+<body class="is-preload">
+
+	<!-- Wrapper -->
+	<div id="wrapper">
+
+		<!-- Header -->
+		<header id="header">
+			<div class="logo">
+				<!-- <img  src="images/logo.jpg" style="width:120px; height:120px; border-radius:100%; transform: translate(-3px,-1px);"> -->
+				<span class="icon fa-gem"></span>
+			</div>
+			<div class="content">
+				<div class="inner">
+					<h1>夜鹿</h1>
+					<p>一种喜欢<a href="https://music.163.com/#/song?id=1466520418">夜行</a>的生物 以<a href="https://music.163.com/#/song?id=1357953769">花绿青</a>为食 一般栖息于<a href="https://y.qq.com/n/ryqq/songDetail/003Wmjrz0sf1Ji">森林中的教堂</a><br />
+					<p>与<a href="https://music.163.com/#/song?id=557581314">负犬</a>为合作关系 习惯在<a href="https://music.163.com/#/song?id=557583336">冬眠</a>后围绕<a href="https://music.163.com/#/song?id=1387098934">湖之城</a>开始<a href="https://music.163.com/#/song?id=1357628744">游行</a>
+					</p>
+				</div>
+			</div>
+			<nav>
+				<ul>
+					<li><a href="#intro">乐队简介</a></li>
+				</ul>
+			</nav>
+		</header>
+
+		<!-- Main -->
+		<div id="main">
+
+			<!-- Intro -->
+			<article id="intro">
+				<h2 class="major">乐队简介</h2>
+				<span class="image main"><img src="images/pic01.jpg" alt="" /></span>
+				<p>ヨルシカ这个名字出自歌曲「雲と幽霊」中的歌词「夜しかもう眠れずに」。乐队logo的主题为月与月的互面，同时也成为了时钟的指针，意思是从6点开始为夜晚。<br />
+
+				<p>2017年组合成立，于4月21日发布歌曲《靴の花火》宣布出道，在同年6月28日正式发售首张迷你专《夏草が邪魔をする》。</p>
+
+				<p>2017年7月9日首次live「夏草が邪魔をする」举行。</p>
+
+				<p>2018年5月9日发售第二张迷你专《負け犬にアンコールはいらない》，在日本Oricon Weekly 独立音乐专辑榜中最高取得排名第5的位置。</p>
+
+				<p>2019年4月10日发售第一张正式专《だから僕は音楽を辞めた》，在日本Oricon Weekly 独立音乐专辑榜中最高取得排名第5的位置。</p>
+
+				<p>2019年8月28日发售第二张正式专《エルマ》，该专辑为上一张专辑的续篇。</p>
+
+				<p>2019年10月，官方粉丝俱乐部“ヨルシカ smartphone site”开张。</p>
+
+				<p>2019年10月17日至10月22日，举行了巡回演唱会「月光」。</p>
+
+				<p>2019年12月11日，举行了巡回演唱会「月光」追加公演。</p>
+
+				<p>2020年2月，获得“第34届日本金唱片大奖”年度最佳新人邦乐。</p>
+
+				<p>2020年2月8日，由于乐队推特账号粉丝数超过n-buna本人账号，再加上n-buna有随意按自己的想法作曲，并退居幕后的意愿，n-buna在发布一系列告别语后，删除其推特账号上的全部推文，随后将账号删除。
+				</p>
+
+				<p>2020年6月18日，为上映的长篇动画电影《想哭的我戴上了猫的面具》提供主题曲《花に亡霊》、插曲《夜行》、片尾曲《嘘月》。</p>
+
+				<p>2020年7月29日发售第三张正式专《盗作》。</p>
+
+				<h4 class="major">主要成员</h2>
+					<p>n-buna，作词、作曲、编曲，同时也是VOCALOID职人。</p>
+
+					<p>suis（スイ），主唱。</p>
+			</article>
+
+			</section>
+
+			
+
+		</div>
+
+		<!-- Footer -->
+		<!-- <footer id="footer">
+			<p class="copyright">&copy; Untitled. Design: <a href="https://html5up.net">HTML5 UP</a>.</p>
+		</footer> -->
+		<audio style="display: none;width:500px; height:100px;" id="player" loop="loop" autoplay="autoplay" controls="controls" src="sea.mp3">
+	</div>
+
+	<!-- BG -->
+	<div id="bg"></div>
+
+	<!-- Scripts -->
+	<script src="assets/js/jquery.min.js"></script>
+	<script src="assets/js/browser.min.js"></script>
+	<script src="assets/js/breakpoints.min.js"></script>
+	<!-- <script src="assets/js/util.js"></script> -->
+	<script src="assets/js/main.js"></script>
+	<script>
+		document.addEventListener('click',function(e){
+			var music=document.getElementById("player")
+			if(music.paused){
+				music.paused=false;
+				music.play();
+				console.log("音乐启动")
+			}
+		})
+	</script>
+</body>
+
+</html>

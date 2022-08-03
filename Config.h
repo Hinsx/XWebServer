@@ -4,7 +4,9 @@
 class Config{
     private:
     //io线程数量(从reactor数量)
-    int threadNum_=0;
+    int threadNum_=2;
+    //数据库连接池数量
+    int sqlConnectionNums_=2;
     //日志模式,同步到标准输出流/异步到文件,默认同步
     bool asynclogging=false;
     //日志级别,TRACE DEBUG INFO （前三级可过滤）ERROR WARN FATAL 
@@ -20,8 +22,8 @@ class Config{
     //空闲连接超时时间
     int idle_=5;
     //允许同时处理连接的最大数量
-    int connectionNums_=30000;
-    //当前资源文件（html）所在的路径
+    int connectionNums_=100000;
+    //当前资源文件（html/css/js等）所在的路径
     const char* resourcePath="/home/alkali/cpp/XWebServer/root";
     
     public:
@@ -29,6 +31,7 @@ class Config{
 
     void parse_arg(int argc, char*argv[]);
     int getThreadNum(){return threadNum_;}
+    int getSqlConnectionNum(){return sqlConnectionNums_;}
     bool asynclog(){return asynclogging;}
     int loglevel(){return logLevel_;}
     bool useEpoll(){return mode;}

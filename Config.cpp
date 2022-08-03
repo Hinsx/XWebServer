@@ -3,7 +3,7 @@
 #include<stdlib.h>
 #include<stdio.h>
 void usage(){
-    printf("Usage:[-c threadNums] [-a] [-l loglevel] [-m] [-n server name] [i server ip] [p server port] [-w connection idle time] [-s max connections number]\n");
+    printf("Usage:[-c threadNums] [-a] [-l loglevel] [-m] [-n server name] [i server ip] [p server port] [-w connection idle time] [-s connections number] [-q sql connections number]\n");
 }
 void Config::parse_arg(int argc, char*argv[]){
     int opt;
@@ -55,6 +55,11 @@ void Config::parse_arg(int argc, char*argv[]){
         case 's':
         {
             connectionNums_=atoi(optarg);
+            break;
+        }
+        case 'q':
+        {
+            sqlConnectionNums_=atoi(optarg);
             break;
         }
         case '?':

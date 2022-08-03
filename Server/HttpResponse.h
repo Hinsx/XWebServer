@@ -7,7 +7,7 @@
 #include<string>
 
 class Buffer;
-
+class SendMsg;
 //http回复报文
 class HttpResponse {
  public:
@@ -31,7 +31,8 @@ class HttpResponse {
 
   explicit HttpResponse(bool close)
     : statusCode_(kUnknown),
-      closeConnection_(close)
+      closeConnection_(close),
+      filesize_(0)
   {
   }
 
@@ -64,8 +65,11 @@ class HttpResponse {
     int sizeb=body_.size();
     int reallen=sizeb-sizea;
   }
-
+  void setFile(const std::string& name,size_t size){filename_=name;filesize_=size;}
+  const std::string& getFilename() const{return filename_;} 
+  size_t getFilesize(){return filesize_;}
   void appendToBuffer(Buffer* output) const;
+  void appendToBuffer_(SendMsg* output)const;
 
  private:
   std::map<std::string, std::string> headers_;
@@ -74,6 +78,8 @@ class HttpResponse {
   std::string statusMessage_;
   bool closeConnection_;
   std::string body_;
+  std::string filename_;
+  size_t filesize_;
 };
 
 

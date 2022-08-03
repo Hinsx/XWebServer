@@ -16,7 +16,6 @@ SQLConnection::SQLConnection(string host, string user, string passwd, string db_
     {
         LOG_SYSFATAL << "Failed in mysql_real_connect";
     }
-    result_=NULL;
 }
 SQLConnection::~SQLConnection()
 {
@@ -28,7 +27,6 @@ SQLConnection::~SQLConnection()
 Query::Query():pool_(SQLpool::getInstance())
 {  
     conn_=pool_->getConnection();
-    conn_->result_=NULL;
 }
 Query::~Query()
 {
@@ -37,6 +35,7 @@ Query::~Query()
         if (conn_->result_ != NULL)
         {
             mysql_free_result(conn_->result_);
+            conn_->result_=NULL;
             pool_->releaseConnection(conn_);
         }
     }

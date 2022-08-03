@@ -235,7 +235,7 @@
                 <input type="text" placeholder="用户名" class="input" required="required" maxlength="15" id="rname" />
                 <input type="password" placeholder="设置密码" class="input" required="required" maxlength="30"
                     id="rpassword" />
-                <button class="btn" onclick="registe()">注册</button>
+                <button type="button" class="btn" onclick="registe()">注册</button>
             </form>
         </div>
 
@@ -246,7 +246,7 @@
                 <input type="text" placeholder="用户名" class="input" required="required" maxlength="15" id="lname" />
                 <input type="password" placeholder="密码" class="input" required="required" maxlength="30"
                     id="lpassword" />
-                <button class="btn" onclick="login()">登录</button>
+                <button type="button" class="btn" onclick="login()">登录</button>
             </form>
         </div>
 
@@ -278,48 +278,68 @@
             container.classList.add("right-panel-active");
         });
 
-        loginForm.addEventListener("submit", (e) => e.preventDefault());
-        registeForm.addEventListener("submit", (e) => e.preventDefault());
+        // loginForm.addEventListener("click", (e) => e.login());
+        // registeForm.addEventListener("click", (e) => e.preventDefault());
         function registe() {
             var xmlhttp = new XMLHttpRequest;
+            var password = document.getElementById("rpassword").value;
+            var name = document.getElementById("rname").value;
+            if (!checkstr(password) || !checkstr(name)) {
+                alert("用户名和密码长度为1~15")
+                return
+            }
             xmlhttp.onreadystatechange = function () {
                 if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
-                    alert(this.responseText);
+                    var myArr = JSON.parse(this.responseText);
+                    registeProcess(myArr)
                 }
             }
-
             xmlhttp.open("POST", "/registe", true);
             xmlhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-            var name = document.getElementById("rname").value;
-            var password = document.getElementById("rpassword").value;
             var poststring = "name=" + name + "&password=" + password;
             xmlhttp.send(poststring);
         }
         function login() {
             var xmlhttp = new XMLHttpRequest;
+            var name = document.getElementById("lname").value;
+            var password = document.getElementById("lpassword").value;
+            if (!checkstr(password) || !checkstr(name)) {
+                alert("用户名和密码长度为1~15")
+                return;
+            }
             xmlhttp.onreadystatechange = function () {
                 if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
                     var myArr = JSON.parse(this.responseText);
-                    process(myArr)
+                    loginProcess(myArr)
                 }
             }
             xmlhttp.open("POST", "/login", true);
             xmlhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-            var name = document.getElementById("lname").value;
-            var password = document.getElementById("lpassword").value;
             var poststring = "name=" + name + "&password=" + password;
             xmlhttp.send(poststring);
         }
-        function process(arr)
-        {
-            if(arr.status=="success")
-            {
-                window.location.href=arr.path;
+        function loginProcess(arr) {
+            if (arr.status == "success") {
+                window.location.href = arr.path;
             }
-            else
-            {
-                alert(arr.status)
+            else if (arr.status == "noexist") {
+                alert("用户不存在。请检查用户名或密码是否正确。")
             }
+        }
+
+        function registeProcess(arr) {
+            if (arr.status == "success") {
+                alert("注册成功。")
+            }
+            else if (arr.status == "exist") {
+                alert("用户已经存在，无法重复注册.")
+            }
+        }
+        function checkstr(s) {
+            if (typeof s == 'string' && s.length > 0 && s.length < 15) {
+                return true
+            }
+            return false
         }
 
     </script>

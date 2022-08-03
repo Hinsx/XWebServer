@@ -7,47 +7,55 @@
 #include <unistd.h>
 #include <sys/stat.h>
 
-extern const char* FILE_PATH;
+extern const char *FILE_PATH;
 
 //根据文件后缀设置相应的content-type
-void setContentType(HttpResponse &response,const string& filename)
+void setContentType(HttpResponse &response, const string &filename)
 {
-    int begin=filename.find_last_of ('.', filename.length()-1);
-    const char* postorder=filename.c_str()+begin+1;
-    if(strcmp(postorder,"html")==0)
+    int begin = filename.find_last_of('.', filename.length() - 1);
+    const char *postorder = filename.c_str() + begin + 1;
+    if (strcmp(postorder, "html") == 0)
     {
         response.setContentType("text/html; charset=utf-8");
     }
-    else if(strcmp(postorder,"jpg")==0)
+    else if (strcmp(postorder, "jpg") == 0)
     {
         response.setContentType("image/jpeg");
     }
-    else if(strcmp(postorder,"png")==0)
+    else if (strcmp(postorder, "png") == 0)
     {
         response.setContentType("image/png");
     }
+    else if (strcmp(postorder, "css") == 0)
+    {
+        response.setContentType("text/css");
+    }
+    else if (strcmp(postorder, "js") == 0)
+    {
+        response.setContentType("application/x-javascript");
+    }
 }
 //请求文件
-void acquireFile(HttpResponse &response,std::string& filename)
+void acquireFile(HttpResponse &response, std::string &filename)
 {
     //检查访问的文件的属性
-    struct stat buf;
+    struct stat attribute;
 
     //文件或目录不存在
-    if(stat(filename.c_str(), &buf)<0)
+    if (stat(filename.c_str(), &attribute) < 0)
     {
         response.setStatusCode(HttpResponse::k404NotFound);
         response.setStatusMessage("NotFound");
     }
     //文件或目录不允许其他人读取(只有root可读)
-    else if(!(buf.st_mode & S_IROTH))
+    else if (!(attribute.st_mode & S_IROTH))
     {
         response.setStatusCode(HttpResponse::k403ForBidden);
         response.setStatusMessage("ForBidden");
     }
 
     //访问路径是一个目录
-    else if(S_ISDIR(buf.st_mode))
+    else if (S_ISDIR(attribute.st_mode))
     {
         response.setStatusCode(HttpResponse::k400BadRequest);
         response.setStatusMessage("BadRequest");
@@ -57,20 +65,21 @@ void acquireFile(HttpResponse &response,std::string& filename)
     {
         response.setStatusCode(HttpResponse::k200Ok);
         response.setStatusMessage("OK");
-        //response.setContentType("image/jpeg");
-        setContentType(response,filename);
+        // response.setContentType("image/jpeg");
+        setContentType(response, filename);
         response.addHeader("Server", "xWebServer");
-        //读取文件到body
-        FILE* file=fopen(filename.c_str(),"rb");
-        char tmp[4096];
-        string body;
-        while(!feof(file))
-        {
-            memset(tmp,'\0',sizeof(tmp));
-            size_t n=fread(tmp,sizeof(char),sizeof(tmp)-1,file);
-            response.appendToBody(tmp,n);
-        }
-        fclose(file);
+        response.setFile(filename, attribute.st_size);
+        // //读取文件到body
+        // FILE* file=fopen(filename.c_str(),"rb");
+        // char tmp[buf.st_size+1];
+        // string body;
+        // while(!feof(file))
+        // {
+        //     memset(tmp,'\0',sizeof(tmp));
+        //     size_t n=fread(tmp,sizeof(char),sizeof(tmp)-1,file);
+        //     response.appendToBody(tmp,n);
+        // }
+        // fclose(file);
     }
 }
 
@@ -82,13 +91,13 @@ void handleGET(const HttpRequest &req, HttpResponse &response)
     //访问首页
     if (req.path() == "/" || req.path() == "http://120.76.192.202:9006/")
     {
-        filename+="/login.html";
+        filename += "/login.html";
     }
     else
     {
-        filename+=req.path();
+        filename += req.path();
     }
-    acquireFile(response,filename);
+    acquireFile(response, filename);
 }
 //处理POST请求
 void handlePOST(const HttpRequest &req, HttpResponse &response)
@@ -123,7 +132,7 @@ void handlePOST(const HttpRequest &req, HttpResponse &response)
             response.setStatusMessage("OK");
             response.setContentType("text/plain");
             response.addHeader("Server", "xWebServer");
-            response.setBody("Registe successfully.");
+            response.setBody("{\"status\":\"success\"}");
         }
         //注册的用户已经存在，返回提醒
         else if (row > 0)
@@ -132,13 +141,13 @@ void handlePOST(const HttpRequest &req, HttpResponse &response)
             response.setStatusMessage("OK");
             response.setContentType("text/plain");
             response.addHeader("Server", "xWebServer");
-            response.setBody("The username has been registed! Try another one please.");
+            response.setBody("{\"status\":\"exist\"}");
         }
     }
     //登录活动
     else if (req.path() == "/login")
     {
-        MYSQL_RES *result=NULL;
+        MYSQL_RES *result = NULL;
         int row = -1;
         {
             Query query;
@@ -152,27 +161,27 @@ void handlePOST(const HttpRequest &req, HttpResponse &response)
         if (row == -1)
         {
             response.setStatusCode(HttpResponse::k503ServiceUnavailable);
-            response.setStatusMessage("Service Unavailable");            
+            response.setStatusMessage("Service Unavailable");
         }
         //不存在此用户，检查用户名或者密码
         else if (row == 0)
         {
-           response.setStatusCode(HttpResponse::k200Ok);
-           response.setStatusMessage("OK");
-           response.setContentType("text/plain");
-           response.addHeader("Server", "xWebServer");
-           response.setBody("{\"status\":\"Wrong with name or password.\"}");  
+            response.setStatusCode(HttpResponse::k200Ok);
+            response.setStatusMessage("OK");
+            response.setContentType("text/plain");
+            response.addHeader("Server", "xWebServer");
+            response.setBody("{\"status\":\"noexist\"}");
         }
         //登录的用户存在
         else if (row > 0)
         {
-            assert(row==1);
-            
-           response.setStatusCode(HttpResponse::k200Ok);
-           response.setStatusMessage("OK");
-           response.setContentType("text/plain");
-           response.addHeader("Server", "xWebServer");
-           response.setBody("{\"status\":\"success\",\"path\":\"/judge.html\"}");           
+            assert(row == 1);
+
+            response.setStatusCode(HttpResponse::k200Ok);
+            response.setStatusMessage("OK");
+            response.setContentType("text/plain");
+            response.addHeader("Server", "xWebServer");
+            response.setBody("{\"status\":\"success\",\"path\":\"/index.html\"}");
         }
     }
 }
@@ -250,13 +259,13 @@ void HttpConnection::handleRead()
 {
     int savedErrno = 0;
     ssize_t n = inputBuffer_.readFd(channel_->fd(), &savedErrno);
-    
+
     //读取到报文目前全部数据，执行解析
     if (n > 0)
     {
         //有数据到来则更新定时器
         messageCallback_(shared_from_this());
-        printf("%s",inputBuffer_.peek());
+        //printf("%s", inputBuffer_.peek());
         //解析失败，报文格式错误（若是因为报文不完整，n<0，不会进入此分支）
         if (!context_.parseRequest(&inputBuffer_))
         {
@@ -287,9 +296,13 @@ void HttpConnection::handleRead()
             handleReq(req, response);
 
             //创建临时buffer，若无法全部传入socket缓冲再保存至连接的output buffer
-            Buffer buf;
-            response.appendToBuffer(&buf);
-            send(&buf);
+            // Buffer buf;
+            // response.appendToBuffer(&buf);
+            SendMsg msg(response.getFilename(), response.getFilesize());
+            response.appendToBuffer_(&msg);
+            send(&msg);
+            // send(&buf);
+            
 
             //如果是短连接
             if (response.closeConnection())
@@ -316,53 +329,113 @@ void HttpConnection::handleRead()
     }
 }
 
-void HttpConnection::send(Buffer *buf)
+// void HttpConnection::send(Buffer *buf)
+// {
+//     //为什么有可能send时连接状态不为connected？
+//     //长连接情况下，第一个报文格式错误，调用shutdown，状态修改为kDisConnecting，
+//     //此时第二个报文到来，则不予回复，否则写端可能很长时间无法关闭
+//     if (state_ == kConnected)
+//     {
+//         realSend(buf->peek(), buf->readableBytes());
+//         buf->retrieveAll();
+//     }
+// }
+
+void HttpConnection::send(SendMsg* message)
 {
     //为什么有可能send时连接状态不为connected？
     //长连接情况下，第一个报文格式错误，调用shutdown，状态修改为kDisConnecting，
     //此时第二个报文到来，则不予回复，否则写端可能很长时间无法关闭
     if (state_ == kConnected)
     {
-        realSend(buf->peek(), buf->readableBytes());
-        buf->retrieveAll();
+        realSend(message);
     }
 }
+
 void HttpConnection::send(const char *data, size_t len)
 {
     if (state_ == kConnected)
     {
-        realSend(data, len);
+        SendMsg message("");
+        Buffer *buffer = message.getBuffer();
+        buffer->append(data, len);
+        realSend(&message);
     }
 }
-void HttpConnection::realSend(const char *data, size_t len)
+// void HttpConnection::realSend(const char *data, size_t len)
+// {
+//     ssize_t nwrote = 0;
+//     //剩余未发送数据的长度
+//     size_t remaining = len;
+//     bool faultError = false;
+//     /*
+//       直接尝试向缓冲区写入数据，需要注意避免乱序发送
+//       1.如果outputbuffer中有数据，说明之前写入数据不完全，此时直接写入会乱序
+//       2.第一个条件有点迷糊？buffer为空不就说明没有未发送的数据吗？
+//     */
+//     if (!channel_->isWriting() && outputBuffer_.readableBytes() == 0)
+//     {
+//         // std::string message;
+//         // message.assign(data,len);
+//         // LOG_TRACE<<"------------------The message is:\n"<<message;
+
+//         // fd是非阻塞的，可以直接尝试write
+//         nwrote = write(channel_->fd(), data, len);
+//         //如果数据写入（部分）成功，0表示对端读端关闭，之后再写会造成EPIPE错误
+//         //读端关闭时本机是收不到通知的（写端关闭会收到fin），只能用wirte来发现
+//         if (nwrote > 0)
+//         {
+//             remaining = len - nwrote;
+//         }
+//         //返回-1/0，发生错误/对端关闭
+//         else
+//         {
+//             nwrote = 0; //相当于写入0字节
+//             if (errno != EWOULDBLOCK)
+//             {
+//                 LOG_SYSERR << "something wrong when writing to fd.";
+//                 // EPIPE：对面连接关闭，关闭了读端，收到信息则返回RST
+//                 // ECONNRESET：连接重置，具体是怎么错误的？
+//                 if (errno == EPIPE || errno == ECONNRESET) // FIXME: any others?
+//                 {
+//                     faultError = true;
+//                     //对端已经挂起读端，那么我们也没必要再写入了
+//                     shutdown();
+//                 }
+//             }
+//         }
+//     }
+
+//     // 1.因为阻塞导致没有完全写入 / 因为之前数据未发送，此次数据为了避免乱序而没有发送
+//     // 2.读端未关闭/连接未重置
+//     if (!faultError && remaining > 0)
+//     {
+//         size_t oldLen = outputBuffer_.readableBytes();
+//         // output buffer的关键作用
+//         outputBuffer_.append(static_cast<const char *>(data) + nwrote, remaining);
+//         if (!channel_->isWriting())
+//         {
+//             channel_->enableWriting();
+//         }
+//     }
+// }
+
+void HttpConnection::realSend(SendMsg *message)
 {
-    ssize_t nwrote = 0;
-    //剩余未发送数据的长度
-    size_t remaining = len;
+
     bool faultError = false;
     /*
       直接尝试向缓冲区写入数据，需要注意避免乱序发送
-      1.如果outputbuffer中有数据，说明之前写入数据不完全，此时直接写入会乱序
-      2.第一个条件有点迷糊？buffer为空不就说明没有未发送的数据吗？
+      如果tmpbuffer中有数据，说明之前写入数据不完全，此时直接写入会乱序
     */
-    if (!channel_->isWriting() && outputBuffer_.readableBytes() == 0)
+    if (tmpBuffer_.empty())
     {
-        // std::string message;
-        // message.assign(data,len);
-        // LOG_TRACE<<"------------------The message is:\n"<<message;
 
-        // fd是非阻塞的，可以直接尝试write
-        nwrote = write(channel_->fd(), data, len);
-        //如果数据写入（部分）成功，0表示对端读端关闭，之后再写会造成EPIPE错误
-        //读端关闭时本机是收不到通知的（写端关闭会收到fin），只能用wirte来发现
-        if (nwrote > 0)
+        int ret = message->writeToSocket(channel_->fd());
+        // ret>0:数据(可能只有部分）写入成功
+        // ret<0:发生错误,其中epipe错误经过两次write发现
+        if (ret < 0)
         {
-            remaining = len - nwrote;
-        }
-        //返回-1/0，发生错误/对端关闭
-        else
-        {
-            nwrote = 0; //相当于写入0字节
             if (errno != EWOULDBLOCK)
             {
                 LOG_SYSERR << "something wrong when writing to fd.";
@@ -378,13 +451,11 @@ void HttpConnection::realSend(const char *data, size_t len)
         }
     }
 
-    // 1.因为阻塞导致没有完全写入 / 因为之前数据未发送，此次数据为了避免乱序而没有发送
-    // 2.读端未关闭/连接未重置
-    if (!faultError && remaining > 0)
+    // 1.读端未关闭/连接未重置
+    // 2.因为阻塞导致没有完全写入 / 因为之前数据未发送，此次数据为了避免乱序而没有发送
+    if (!faultError && !message->isWriteAll())
     {
-        size_t oldLen = outputBuffer_.readableBytes();
-        // output buffer的关键作用
-        outputBuffer_.append(static_cast<const char *>(data) + nwrote, remaining);
+        tmpBuffer_.push_back(*message);
         if (!channel_->isWriting())
         {
             channel_->enableWriting();
@@ -408,32 +479,81 @@ void HttpConnection::shutdown()
     }
 }
 
+// void HttpConnection::handleWrite()
+// {
+//     //可能等待可写时，客户端关闭，已经执行了handleClose，此时写数据已经没有意义
+//     if (channel_->isWriting())
+//     {
+//         ssize_t n = write(channel_->fd(), outputBuffer_.peek(), outputBuffer_.readableBytes());
+
+//         if (n > 0)
+//         {
+//             outputBuffer_.retrieve(n);
+//             if (outputBuffer_.readableBytes() == 0)
+//             {
+//                 //因为epoll使用了LT模式，既然已经无需写数据，则取消读事件避免busyloop
+//                 //即使是ET模式也需要此行，否则也会多几次通知（tcp读缓冲区逐渐发送，直到发送结束都会不断通知）
+//                 channel_->disableWriting();
+
+//                 //为什么channel对write感兴趣，连接状态却是disconnecting
+//                 // shutdown调用因为buffer有数据而放弃挂起写端,现在可以挂起了
+//                 if (state_ == kDisconnecting)
+//                 {
+//                     ::shutdown(channel_->fd(), SHUT_WR);
+//                 }
+//             }
+//         }
+//     }
+// }
+
 void HttpConnection::handleWrite()
 {
     //可能等待可写时，客户端关闭，已经执行了handleClose，此时写数据已经没有意义
     if (channel_->isWriting())
     {
-        ssize_t n = write(channel_->fd(), outputBuffer_.peek(), outputBuffer_.readableBytes());
-
-        if (n > 0)
+        while (!tmpBuffer_.empty())
         {
-            outputBuffer_.retrieve(n);
-            if (outputBuffer_.readableBytes() == 0)
+            SendMsg &message = tmpBuffer_.front();
+            int ret = message.writeToSocket(channel_->fd());
+            //缓冲区已满/对端挂起/连接重置，放弃写入
+            if (ret < 0)
             {
-                //因为epoll使用了LT模式，既然已经无需写数据，则取消读事件避免busyloop
-                //即使是ET模式也需要此行，否则也会多几次通知（tcp读缓冲区逐渐发送，直到发送结束都会不断通知）
-                channel_->disableWriting();
-
-                //为什么channel对write感兴趣，连接状态却是disconnecting
-                // shutdown调用因为buffer有数据而放弃挂起写端,现在可以挂起了
-                if (state_ == kDisconnecting)
+                if (errno != EWOULDBLOCK)
                 {
-                    ::shutdown(channel_->fd(), SHUT_WR);
+                    LOG_SYSERR << "something wrong when writing to fd.";
+                    // EPIPE：对面连接关闭，关闭了读端，收到信息则返回RST
+                    // ECONNRESET：连接重置，具体是怎么错误的？
+                    if (errno == EPIPE || errno == ECONNRESET) // FIXME: any others?
+                    {
+                        //对端已经挂起读端，那么我们也没必要再写入了
+                        shutdown();
+                    }
                 }
+                break;
+            }
+            //如果写入完成，执行下一个写入，否则直接对当前信息再次写入，基本会造成ewouldblock导致停止循环
+            if (message.isWriteAll())
+            {
+                tmpBuffer_.pop_front();
+            }
+        }
+        //数据全部写完
+        if (tmpBuffer_.empty())
+        {
+            //因为epoll使用了LT模式，既然已经无需写数据，则取消读事件避免busyloop
+            //即使是ET模式也需要此行，否则也会多几次通知（tcp读缓冲区逐渐发送，直到发送结束都会不断通知）
+            channel_->disableWriting();
+
+            //为什么channel对write感兴趣，连接状态却是disconnecting
+            // shutdown调用因为buffer有数据而放弃挂起写端,现在可以挂起了
+            if (state_ == kDisconnecting)
+            {
+                ::shutdown(channel_->fd(), SHUT_WR);
             }
         }
     }
 }
+
 void HttpConnection::connectEstablished()
 {
     setState(kConnected);

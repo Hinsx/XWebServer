@@ -17,16 +17,26 @@ class Threadpool{
     //static int maxRequestNumber_;
 
     public:
+    //初始化线程池的线程（主线程）
     static EventLoop* kLoop;
-    static int kmaxThreadNumber;
+    //线程池大小
+    static int threadNum;
+    //线程池大小的上限
+    static int kMaxThreadNum;
+    //eventloop的io复用模式
+    static bool mode;
     //单例模式对外接口
     static Threadpool* init(EventLoop* loop){
         kLoop=loop;
         pthread_once(&ponce_,Threadpool::createThreapollInstance);
         return threadpool_;
     }
-    static void set_maxThreadNumber(int num){
-        kmaxThreadNumber=num;
+    static void setThreadNum(int num){
+        num=num<0?0:(num>kMaxThreadNum?kMaxThreadNum:num);
+        threadNum=num;
+    }
+    static void setPollMode(bool m){
+        mode=m;
     }
     // static void set_maxRequestNumber(int num){
     //     maxRequestNumber_=num;

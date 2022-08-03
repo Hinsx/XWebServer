@@ -3,15 +3,16 @@
 #include "../Log/Logger.h"
 #include "EventLoop.h"
 #include <iostream>
-int Threadpool::kmaxThreadNumber = 5;
+int Threadpool::threadNum;
 EventLoop* Threadpool::kLoop =nullptr;
-// int Threadpool::maxRequestNumber_=10000;
+int Threadpool::kMaxThreadNum=3;
+bool Threadpool::mode=true;
 
 pthread_once_t Threadpool::ponce_ = PTHREAD_ONCE_INIT;
 Threadpool *Threadpool::threadpool_ = nullptr;
 
 Threadpool::Threadpool(EventLoop *loop) : loop_(loop),
-                                          maxThreadNumber(kmaxThreadNumber),
+                                          maxThreadNumber(threadNum),
                                           loopIndex(0)
 // maxRequestNumber(maxRequestNumber_),
 // poolName("xThread"),
@@ -31,7 +32,7 @@ void Threadpool::start()
     loops_.reserve(maxThreadNumber);
     for (int i =0; i < maxThreadNumber; i++)
     {
-        loops_.emplace_back(new EventLoop);
+        loops_.emplace_back(new EventLoop(mode));
         loops_[i]->startEventLoopThread();
     }
 }
