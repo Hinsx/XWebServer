@@ -71,15 +71,15 @@ size_t SendMsg::writeToSocket(int fd)
       done_=true;
       return 0;
     }
-    int filefd = open(file_.filename().c_str(), O_RDONLY | O_NONBLOCK, "rb");
+    //int filefd = open(file_.filename().c_str(), O_RDONLY | O_NONBLOCK, "rb");
     //零拷贝
-    wrote = sendfile(fd, filefd, file_.nworte(), file_.fileSize());
+    wrote = sendfile(fd, file_.filefd(), file_.nworte(), file_.fileSize());
     // if (wrote >= 0)
     // {
     //   file_.retrieve(wrote);
     // }
     //记得关闭文件描述符
-    close(filefd);
+    //close(filefd);
     if (wrote < 0)
     {
       return -1;

@@ -56,7 +56,14 @@ void AsyncLogging::append(const char* logline, int len)
 
 void AsyncLogging::threadFunc()
 {
-  assert(running_ == true);
+  {
+    MutexLockGuard guard(mutex_);
+    while(!running_){
+      cond_.wait();
+    }
+    assert(running_ == true);
+  }
+  
   //创建日志文件
   LogFile output(basename_, rollSize_);
   Logger::setFlush(std::bind(&LogFile::flush,&output));

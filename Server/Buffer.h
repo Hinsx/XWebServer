@@ -256,24 +256,35 @@ class SendMsg
     struct SendFile
     {
         private:
-        std::string fileName_;
+        //std::string fileName_;
+        int filefd_;
         off_t nwrote_;
         size_t fileSize_;
         public:
-        SendFile(const std::string& fileName,size_t size):
-        fileName_(fileName),
+        // SendFile(const std::string& fileName,size_t size):
+        // fileName_(fileName),
+        // nwrote_(0),
+        // fileSize_(size)
+        // {}
+        SendFile(int filefd,size_t size):
+        filefd_(filefd),
         nwrote_(0),
         fileSize_(size)
         {}
         void retrieve(size_t n){nwrote_+=n;}
         off_t* nworte(){return &nwrote_;}
         size_t fileSize(){return fileSize_;}
-        const std::string& filename()const{return fileName_;}
+        // const std::string& filename()const{return fileName_;}
+        int filefd(){return filefd_;}
         bool faileDone(){return nwrote_==static_cast<size_t>(fileSize_);}
     };
     public:
-    SendMsg(const std::string& fileName,size_t size=0):
-    file_(fileName,size),
+    // SendMsg(const std::string& fileName,size_t size=0):
+    // file_(fileName,size),
+    // done_(false)
+    // {}
+    SendMsg(int filefd,size_t size=0):
+    file_(filefd,size),
     done_(false)
     {}
     Buffer* getBuffer()

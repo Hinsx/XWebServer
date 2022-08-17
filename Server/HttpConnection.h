@@ -25,6 +25,7 @@ class HttpConnection: public std::enable_shared_from_this<HttpConnection>
     typedef std::function<void (const HttpConnectionPtr&)> MessageCallback;
     
 public:
+typedef std::function<int(std::string&)> FileOpenCallback;
     HttpConnection(EventLoop *loop,
                    const std::string &name,
                    int sockfd,
@@ -61,8 +62,14 @@ public:
     void setMeesageCallback(const MessageCallback& cb){
         messageCallback_=cb;
     }
+    static void setFileopenCallback(const FileOpenCallback& cb){
+       HttpConnection::openCallback_=cb;
+    }
     void setWeakEntryPtr(const boost::any& ptr){
         weakEntry_=ptr;
+    }
+    static int getFileFd(std::string& filename){
+        return HttpConnection::openCallback_(filename);
     }
     boost::any getWeakEntryPtr()const{
         return weakEntry_;
@@ -101,9 +108,10 @@ private:
     std::unique_ptr<Channel> channel_;
     std::unique_ptr<Socket>connfd_;
     Buffer inputBuffer_;
+    
+    //Buffer outputBuffer_;
     //实现零拷贝传输
-    Buffer outputBuffer_;
-    std::list<SendMsg> tmpBuffer_;
+    std::list<SendMsg> outputBuffer_;
     InetAddress peerAddr_;
     InetAddress localAddr_;
     HttpContext context_;
@@ -114,6 +122,8 @@ private:
     ConnectionCallback connectionCallback_;
     //handleRead调用，调用server的onMessage函数，用于修改定时器
     MessageCallback messageCallback_;
+    //调用server的newFileOpenCallback，减少open调用次数
+    static FileOpenCallback openCallback_;
 };
 
 #endif

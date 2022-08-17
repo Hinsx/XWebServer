@@ -3,7 +3,7 @@
 #include<stdlib.h>
 #include<stdio.h>
 void usage(){
-    printf("Usage:[-c threadNums] [-a] [-l loglevel] [-m] [-n server name] [i server ip] [p server port] [-w connection idle time] [-s connections number] [-q sql connections number]\n");
+    printf("Usage:[-c threadNums] [-a open asynclog] [-l loglevel] [-m close epoll(chose poll)] [-n server name] [i server ip] [p server port] [-w connection idle time] [-s connections number] [-q sql connections number]\n");
 }
 void Config::parse_arg(int argc, char*argv[]){
     int opt;

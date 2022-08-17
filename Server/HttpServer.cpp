@@ -3,7 +3,9 @@
 #include "Threadpool.h"
 #include "EventLoop.h"
 #include "SQLpool.h"
+
 #include<boost/any.hpp>
+#include <fcntl.h>
 
 HttpServer::HttpServer(EventLoop *loop, std::string name,const char* ip,int port,int idleSeconds,int maxConnectionNums) : loop_(loop),
                                                                         name_(name),
@@ -20,6 +22,7 @@ HttpServer::HttpServer(EventLoop *loop, std::string name,const char* ip,int port
     //每秒执行一次ontimer
     loop_->runEvery(1.0,std::bind(&HttpServer::onTimer,this));
     connectionBuckets_.resize(idleSeconds);
+    HttpConnection::setFileopenCallback(std::bind(&HttpServer::fileOpenCallback,this,std::placeholders::_1));
     LOG_TRACE << "HttpServer init successfully!";
 }
 HttpServer::~HttpServer()
@@ -54,6 +57,7 @@ void HttpServer::newConnnectionCallback(int connfd, InetAddress peerAddr)
         conn->setCloseCallback(std::bind(&HttpServer::removeConnection, this, std::placeholders::_1));
         conn->setConnectionCallback(std::bind(&HttpServer::onConnection,this,std::placeholders::_1));
         conn->setMeesageCallback(std::bind(&HttpServer::onMessage,this,std::placeholders::_1));
+        //conn->setFileopenCallback(std::bind(&HttpServer::fileOpenCallback,this,std::placeholders::_1));
         connections_[connName] = conn;
 
         LOG_DEBUG << "new connection->[" << peerAddr.toIpPort() << "]";
@@ -98,7 +102,17 @@ void HttpServer::onMessage(const HttpConnectionPtr& conn){
         connectionBuckets_.back().insert(entry);
     }
 }
-
+int HttpServer::fileOpenCallback(std::string& filename){
+    MutexLockGuard guard(lock);
+    if(files_.find(filename)!=files_.end()){
+        return files_[filename];
+    }
+    else{
+        int fd=open(filename.c_str(), O_RDONLY | O_NONBLOCK, "rb");
+        files_[filename]=fd;
+        return fd;
+    }
+}
 void HttpServer::onTimer(){
     connectionBuckets_.push_back(Bucket());
 }

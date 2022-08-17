@@ -96,10 +96,11 @@ void Thread::setDefaultName(){
   }
 }
 
-void Thread::start()
+void Thread::start(bool run)
 {
     started_=true;
     detail::ThreadData *data = new detail::ThreadData(func_,name_);
+    //sleep(50);
     if (pthread_create(&pthreadId_, nullptr, detail::startThread, data) != 0)
     {
         //输出线程创建错误信息

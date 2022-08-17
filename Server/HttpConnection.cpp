@@ -8,6 +8,7 @@
 #include <sys/stat.h>
 
 extern const char *FILE_PATH;
+HttpConnection::FileOpenCallback HttpConnection::openCallback_;
 
 //根据文件后缀设置相应的content-type
 void setContentType(HttpResponse &response, const string &filename)
@@ -68,16 +69,19 @@ void acquireFile(HttpResponse &response, std::string &filename)
         // response.setContentType("image/jpeg");
         setContentType(response, filename);
         response.addHeader("Server", "xWebServer");
-        response.setFile(filename, attribute.st_size);
+        //response.setFile(filename, attribute.st_size);
+        int filefd=HttpConnection::getFileFd(filename);
+        response.setFile(filefd, attribute.st_size);
+        //response.setFile(-1, 0);
         // //读取文件到body
         // FILE* file=fopen(filename.c_str(),"rb");
-        // char tmp[buf.st_size+1];
+        // char output[buf.st_size+1];
         // string body;
         // while(!feof(file))
         // {
-        //     memset(tmp,'\0',sizeof(tmp));
-        //     size_t n=fread(tmp,sizeof(char),sizeof(tmp)-1,file);
-        //     response.appendToBody(tmp,n);
+        //     memset(output,'\0',sizeof(output));
+        //     size_t n=fread(output,sizeof(char),sizeof(output)-1,file);
+        //     response.appendToBody(output,n);
         // }
         // fclose(file);
     }
@@ -298,7 +302,7 @@ void HttpConnection::handleRead()
             //创建临时buffer，若无法全部传入socket缓冲再保存至连接的output buffer
             // Buffer buf;
             // response.appendToBuffer(&buf);
-            SendMsg msg(response.getFilename(), response.getFilesize());
+            SendMsg msg(response.getFilefd(), response.getFilesize());
             response.appendToBuffer_(&msg);
             send(&msg);
             // send(&buf);
@@ -356,7 +360,7 @@ void HttpConnection::send(const char *data, size_t len)
 {
     if (state_ == kConnected)
     {
-        SendMsg message("");
+        SendMsg message(-1);
         Buffer *buffer = message.getBuffer();
         buffer->append(data, len);
         realSend(&message);
@@ -426,9 +430,9 @@ void HttpConnection::realSend(SendMsg *message)
     bool faultError = false;
     /*
       直接尝试向缓冲区写入数据，需要注意避免乱序发送
-      如果tmpbuffer中有数据，说明之前写入数据不完全，此时直接写入会乱序
+      如果outputbuffer中有数据，说明之前写入数据不完全，此时直接写入会乱序
     */
-    if (tmpBuffer_.empty())
+    if (outputBuffer_.empty())
     {
 
         int ret = message->writeToSocket(channel_->fd());
@@ -455,7 +459,7 @@ void HttpConnection::realSend(SendMsg *message)
     // 2.因为阻塞导致没有完全写入 / 因为之前数据未发送，此次数据为了避免乱序而没有发送
     if (!faultError && !message->isWriteAll())
     {
-        tmpBuffer_.push_back(*message);
+        outputBuffer_.push_back(*message);
         if (!channel_->isWriting())
         {
             channel_->enableWriting();
@@ -511,9 +515,9 @@ void HttpConnection::handleWrite()
     //可能等待可写时，客户端关闭，已经执行了handleClose，此时写数据已经没有意义
     if (channel_->isWriting())
     {
-        while (!tmpBuffer_.empty())
+        while (!outputBuffer_.empty())
         {
-            SendMsg &message = tmpBuffer_.front();
+            SendMsg &message = outputBuffer_.front();
             int ret = message.writeToSocket(channel_->fd());
             //缓冲区已满/对端挂起/连接重置，放弃写入
             if (ret < 0)
@@ -534,11 +538,11 @@ void HttpConnection::handleWrite()
             //如果写入完成，执行下一个写入，否则直接对当前信息再次写入，基本会造成ewouldblock导致停止循环
             if (message.isWriteAll())
             {
-                tmpBuffer_.pop_front();
+                outputBuffer_.pop_front();
             }
         }
         //数据全部写完
-        if (tmpBuffer_.empty())
+        if (outputBuffer_.empty())
         {
             //因为epoll使用了LT模式，既然已经无需写数据，则取消读事件避免busyloop
             //即使是ET模式也需要此行，否则也会多几次通知（tcp读缓冲区逐渐发送，直到发送结束都会不断通知）

@@ -65,8 +65,10 @@ class HttpResponse {
     int sizeb=body_.size();
     int reallen=sizeb-sizea;
   }
-  void setFile(const std::string& name,size_t size){filename_=name;filesize_=size;}
-  const std::string& getFilename() const{return filename_;} 
+  //void setFile(const std::string& name,size_t size){filename_=name;filesize_=size;}
+  void setFile(int fd,size_t size){filefd_=fd;filesize_=size;}
+  //const std::string& getFilename() const{return filename_;}
+  int getFilefd()const{return filefd_;} 
   size_t getFilesize(){return filesize_;}
   void appendToBuffer(Buffer* output) const;
   void appendToBuffer_(SendMsg* output)const;
@@ -79,6 +81,7 @@ class HttpResponse {
   bool closeConnection_;
   std::string body_;
   std::string filename_;
+  int filefd_=-1;
   size_t filesize_;
 };
 

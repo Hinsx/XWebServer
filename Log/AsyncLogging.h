@@ -8,6 +8,7 @@
 #include<vector>
 #include<memory>
 #include<atomic>
+#include<unistd.h>
 
 //收集前端信息，输出到磁盘
 class AsyncLogging{
@@ -31,7 +32,8 @@ class AsyncLogging{
   void start()
   {
     running_ = true;
-    thread_.start();
+    cond_.notify();
+    thread_.start(running_);
   }
   //停止日志线程
   void stop() 
@@ -53,7 +55,8 @@ class AsyncLogging{
   //获取前端buffer的时间间隔，防止写入消息过少导致长时间没有信息写入日志文件，即刷新缓冲区
   const int flushInterval_;
   //日志线程停止变量
-  std::atomic<bool> running_;
+  //std::atomic<bool> running_;
+  bool running_;
   //日志目标文件
   const string basename_;
   //单个日志文件记录量上限

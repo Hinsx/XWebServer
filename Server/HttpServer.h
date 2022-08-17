@@ -9,7 +9,7 @@
 #include<set>
 #include<boost/circular_buffer.hpp>
 
-
+#include"Lock.h"
 #include "InetAddress.h"
 #include"../Log/Logger.h"
 #include"HttpConnection.h"
@@ -73,6 +73,8 @@ public:
     void removeConnectionInLoop(const HttpConnectionPtr &conn);
 
     void newConnnectionCallback(int connfd, InetAddress peerAddr);
+    //连接需要打开文件时，首先查看是否以及打开，减少open调用
+    int fileOpenCallback(std::string& filename);
 
     /*
     定时器超时回调，新增bucket到尾部，若到达长度上限则弹出头部元素，
@@ -104,7 +106,10 @@ private:
     int nextConnId_;
     //最大连接数量
     int maxConnectionNums_;
-
+    //存储文件名及其对应的文件描述符
+    std::map<std::string,int>files_;
+    //互斥修改map
+    MutexLock lock;
     //智能指针处理连接
     HttpConnectionMap connections_;
 };

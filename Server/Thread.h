@@ -12,7 +12,7 @@ class Thread
     typedef std::function<void()>ThreadFunc;
 public:
     Thread(ThreadFunc func,std::string n);
-    void start();
+    void start(bool run=false);
     void setstart(){started_=true;}
     bool stareted(){return started_;}
     int join(){
