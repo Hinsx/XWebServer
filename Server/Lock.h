@@ -30,7 +30,7 @@ public:
     }
     //禁止复制构造和赋值
     MutexLock(const MutexLock &) = delete;
-    MutexLock &operator=(const MutexLock &) = delete;
+    void operator=(const MutexLock &) = delete;
 
 private:
     //用于条件变量
@@ -109,5 +109,28 @@ public:
 private:
     MutexLock &mutex_;
     pthread_cond_t pcond_;
+};
+//读写锁封装
+class RWLock{
+    public:
+    RWLock(){
+        rwlock=PTHREAD_RWLOCK_INITIALIZER;
+    }
+    ~RWLock(){
+        pthread_rwlock_destroy(&rwlock);
+    }
+    void lock_read(){
+        pthread_rwlock_rdlock(&rwlock);
+    }
+    void lock_write(){
+        pthread_rwlock_wrlock(&rwlock);
+    }   
+    void unlock(){
+        pthread_rwlock_unlock(&rwlock);
+    }
+    RWLock(const RWLock& lock)=delete;
+    void operator=(const RWLock& lock)=delete;
+    private:
+    pthread_rwlock_t rwlock;
 };
 #endif

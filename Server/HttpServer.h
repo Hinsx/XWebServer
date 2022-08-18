@@ -109,7 +109,7 @@ private:
     //存储文件名及其对应的文件描述符
     std::map<std::string,int>files_;
     //互斥修改map
-    MutexLock lock;
+    RWLock lock;
     //智能指针处理连接
     HttpConnectionMap connections_;
 };

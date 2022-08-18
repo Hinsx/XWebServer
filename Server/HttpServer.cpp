@@ -103,13 +103,18 @@ void HttpServer::onMessage(const HttpConnectionPtr& conn){
     }
 }
 int HttpServer::fileOpenCallback(std::string& filename){
-    MutexLockGuard guard(lock);
+    lock.lock_read();
     if(files_.find(filename)!=files_.end()){
-        return files_[filename];
+        int fd=files_[filename];
+        lock.unlock();
+        return fd;
     }
     else{
+        lock.unlock();
+        lock.lock_write();
         int fd=open(filename.c_str(), O_RDONLY | O_NONBLOCK, "rb");
         files_[filename]=fd;
+        lock.unlock();
         return fd;
     }
 }
