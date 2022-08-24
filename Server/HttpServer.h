@@ -7,7 +7,8 @@
 #include <memory>
 #include <map>
 #include<set>
-#include<boost/circular_buffer.hpp>
+#include<queue>
+//#include<boost/circular_buffer.hpp>
 
 #include"Lock.h"
 #include "InetAddress.h"
@@ -57,8 +58,20 @@ class HttpServer
     typedef std::shared_ptr<Entry>EntryPtr;
     typedef std::weak_ptr<Entry>WeakEntryPtr;
     typedef std::set<EntryPtr>Bucket;
-    typedef boost::circular_buffer<Bucket>WeakConnectionList;
-
+    //typedef boost::circular_buffer<Bucket>WeakConnectionList;
+    //typedef std::queue<Bucket>WeakConnectionList;
+    struct CircularBuffer{
+        std::deque<Bucket>buffer;
+        int capacity;
+        void setCapacity(int c){capacity=c<0?1:c;}
+        void push_back(const Bucket& bucket){
+            buffer.push_back(bucket);
+            if(buffer.size()>capacity){
+                buffer.pop_front();
+            }
+        }
+        Bucket& back(){return buffer.back();}
+    };
 public:
     //初始化服务器,默认使用poll模式进行监听
     HttpServer(EventLoop *loop, std::string name, const char* ip,int port,int idleSeconds,int maxConnectionNums);
@@ -84,9 +97,11 @@ public:
 
     //为新连接创建一个entry
     void onConnection(const HttpConnectionPtr& conn);
+    void onConnectionInLoop(const HttpConnectionPtr& conn);
 
     //连接重新计时
     void onMessage(const HttpConnectionPtr& conn);
+    void onMessageInLoop(const HttpConnectionPtr& conn);
 
 private:
 
@@ -101,7 +116,9 @@ private:
     //线程池,采用RR算法选择新线程
     std::unique_ptr<Threadpool> pool_;
     //时间轮
-    WeakConnectionList connectionBuckets_;
+    CircularBuffer connectionBuckets_;
+    //时间轮大小
+    int size;
     //连接id，标识连接用于映射
     int nextConnId_;
     //最大连接数量

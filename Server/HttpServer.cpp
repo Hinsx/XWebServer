@@ -14,14 +14,15 @@ HttpServer::HttpServer(EventLoop *loop, std::string name,const char* ip,int port
                                                                         ipPort_(InetAddress::addrToIpPort(localAddr_)),
                                                                         acceptor(new Acceptor(loop_, localAddr_)),
                                                                         pool_(Threadpool::init(loop_)),
-                                                                        connectionBuckets_(idleSeconds),
+                                                                        size(idleSeconds),
+                                                                        //connectionBuckets_(idleSeconds),
                                                                         nextConnId_(1),
                                                                         maxConnectionNums_(maxConnectionNums)
 {
     acceptor->setNewConnectionCallback(std::bind(&HttpServer::newConnnectionCallback, this, std::placeholders::_1, std::placeholders::_2));
     //每秒执行一次ontimer
     loop_->runEvery(1.0,std::bind(&HttpServer::onTimer,this));
-    connectionBuckets_.resize(idleSeconds);
+    //connectionBuckets_.resize(idleSeconds);
     HttpConnection::setFileopenCallback(std::bind(&HttpServer::fileOpenCallback,this,std::placeholders::_1));
     LOG_TRACE << "HttpServer init successfully!";
 }
@@ -81,8 +82,11 @@ void HttpServer::removeConnectionInLoop(const HttpConnectionPtr &conn)
     EventLoop *ioLoop = conn->getLoop();
     ioLoop->queueInLoop(std::bind(&HttpConnection::connectDestroyed, conn));
 }
-
 void HttpServer::onConnection(const HttpConnectionPtr& conn){
+    loop_->queueInLoop(std::bind(&HttpServer::onConnectionInLoop,this,conn));
+}
+void HttpServer::onConnectionInLoop(const HttpConnectionPtr& conn)
+{
     EntryPtr entry(new Entry(conn));
     connectionBuckets_.back().insert(entry);
     /*将指向这个entry的weakptr保存起来，当连接收到信息时，
@@ -92,9 +96,10 @@ void HttpServer::onConnection(const HttpConnectionPtr& conn){
     WeakEntryPtr weakEntry(entry);
     conn->setWeakEntryPtr(weakEntry);
 }
-
 void HttpServer::onMessage(const HttpConnectionPtr& conn){
-    //boost::any_cast — Custom keyword cast for extracting a value of a given type from an any.
+    loop_->queueInLoop(std::bind(&HttpServer::onMessageInLoop,this,conn));
+}
+void HttpServer::onMessageInLoop(const HttpConnectionPtr& conn){
     WeakEntryPtr weakEntry(boost::any_cast<WeakEntryPtr>(conn->getWeakEntryPtr()));
     EntryPtr entry(weakEntry.lock());
     //如果提升失败，说明连接是在超时的情况下收到信息，那就不更新计时
