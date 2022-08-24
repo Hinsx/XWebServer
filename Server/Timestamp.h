@@ -36,6 +36,10 @@ inline bool operator<(Timestamp l, Timestamp r)
 {
     return l.microSeconds() < r.microSeconds();
 }
+inline bool operator<=(Timestamp l, Timestamp r)
+{
+    return l.microSeconds() <= r.microSeconds();
+}
 inline bool operator__(Timestamp l, Timestamp r)
 {
     return l.microSeconds() == r.microSeconds();

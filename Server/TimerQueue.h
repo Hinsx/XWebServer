@@ -3,7 +3,7 @@
 
 #include"Timestamp.h"
 #include"Channel.h"
-#include<set>
+#include<queue>
 #include<vector>
 #include<functional>
 #include<memory>
@@ -23,7 +23,9 @@ class TimerQueue{
     private:
     typedef std::shared_ptr<Timer>TimerPtr;
     typedef std::pair<Timestamp,TimerPtr>Entry;
-    typedef std::set<Entry>TimerList;
+    //使用小根堆来管理定时器，堆顶超时时间作为timer_fd的唤醒时间
+    struct Cmp{bool operator()(const Entry& a,const Entry& b){return b.first<a.first;}};
+    typedef std::priority_queue<Entry,std::vector<Entry>,Cmp>TimerList;
     
     void handleRead();
     //定时回调,获取超时的定时器，以vector返回

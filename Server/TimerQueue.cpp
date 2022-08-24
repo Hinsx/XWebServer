@@ -81,15 +81,20 @@ void TimerQueue::handleRead(){
 
 std::vector<TimerQueue::Entry>TimerQueue::getExpired(Timestamp now){
     std::vector<Entry>expired;
-    //通过二分upper_bound寻找最后一个超时的(包括=now)定时器，以其为结尾将set中的超时定时器取出
-    Timer tmp;
-    Entry sentry(now,TimerPtr(&tmp,[](Timer* ptr){}));
-    TimerList::iterator end=timers_.upper_bound(sentry);
-    assert(end == timers_.end() || now < end->first);
-    //使用back_inserter不必事先知道要复制的元素数量,这会顺带复制shareptr
-    std::copy(timers_.begin(),end,back_inserter(expired));
-    //定时器取出
-    timers_.erase(timers_.begin(),end);
+    // //通过二分upper_bound寻找第一个不超时（也就是绝对时间大于now）的定时器，以其为结尾（开区间）将set中的超时定时器取出
+    // Timer tmp;
+    // Entry sentry(now,TimerPtr(&tmp,[](Timer* ptr){}));
+    // TimerList::iterator end=timers_.upper_bound(sentry);
+    // assert(end == timers_.end() || now < end->first);
+    // //使用back_inserter不必事先知道要复制的元素数量,这会顺带复制shareptr
+    // std::copy(timers_.begin(),end,back_inserter(expired));
+    // //定时器取出
+    // timers_.erase(timers_.begin(),end);
+    assert(!timers_.empty()&&timers_.top().first<=now);
+    while(!timers_.empty()&&timers_.top().first<=now){
+        expired.push_back(timers_.top());
+        timers_.pop();
+    }
     return expired;
 }
 
@@ -103,7 +108,7 @@ void TimerQueue::reset(const std::vector<Entry>& expired,Timestamp now){
     }
     //将timequeue唤醒时间设置为最小的超时时间
     if(!timers_.empty()){
-        nextExpire=timers_.begin()->second->expiration();
+        nextExpire=(timers_.top().second)->expiration();
     }
     //当至少存在一个定时器，设置唤醒时间
     if(nextExpire.valid()){
@@ -114,12 +119,10 @@ void TimerQueue::reset(const std::vector<Entry>& expired,Timestamp now){
 bool TimerQueue::insert(const TimerPtr& timer){
     bool newEarliest=false;
     Timestamp when=timer->expiration();
-    TimerList::iterator it=timers_.begin();
-    //新增的定时器最小，需要设置timequeue的唤醒时间
-    if(it==timers_.end()||when<it->first){
+    //新增的定时器最小(或者还没有定时器），需要设置timequeue的唤醒时间
+    if(timers_.empty()||when<timers_.top().first){
         newEarliest=true;
     }
-    std::pair<TimerList::iterator,bool>result=timers_.insert(Entry(when,timer));
-    assert(result.second);
+    timers_.emplace(when,timer);
     return newEarliest;
 }
