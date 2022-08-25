@@ -117,8 +117,8 @@ private:
     std::unique_ptr<Threadpool> pool_;
     //时间轮
     CircularBuffer connectionBuckets_;
-    //时间轮大小
-    int size;
+    //空闲连接停留时间
+    int idleSeconds_;
     //连接id，标识连接用于映射
     int nextConnId_;
     //最大连接数量

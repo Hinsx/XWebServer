@@ -14,7 +14,7 @@ HttpServer::HttpServer(EventLoop *loop, std::string name,const char* ip,int port
                                                                         ipPort_(InetAddress::addrToIpPort(localAddr_)),
                                                                         acceptor(new Acceptor(loop_, localAddr_)),
                                                                         pool_(Threadpool::init(loop_)),
-                                                                        size(idleSeconds),
+                                                                        idleSeconds_(idleSeconds),
                                                                         //connectionBuckets_(idleSeconds),
                                                                         nextConnId_(1),
                                                                         maxConnectionNums_(maxConnectionNums)
@@ -22,7 +22,7 @@ HttpServer::HttpServer(EventLoop *loop, std::string name,const char* ip,int port
     acceptor->setNewConnectionCallback(std::bind(&HttpServer::newConnnectionCallback, this, std::placeholders::_1, std::placeholders::_2));
     //每秒执行一次ontimer
     loop_->runEvery(1.0,std::bind(&HttpServer::onTimer,this));
-    //connectionBuckets_.resize(idleSeconds);
+    connectionBuckets_.setCapacity(idleSeconds_);
     HttpConnection::setFileopenCallback(std::bind(&HttpServer::fileOpenCallback,this,std::placeholders::_1));
     LOG_TRACE << "HttpServer init successfully!";
 }
@@ -117,8 +117,12 @@ int HttpServer::fileOpenCallback(std::string& filename){
     else{
         lock.unlock();
         lock.lock_write();
-        int fd=open(filename.c_str(), O_RDONLY | O_NONBLOCK, "rb");
-        files_[filename]=fd;
+        int fd=-1;
+        if(files_.find(filename)==files_.end()){
+            fd=open(filename.c_str(), O_RDONLY | O_NONBLOCK, "rb");
+            files_[filename]=fd;
+        }
+        else fd=files_[filename];
         lock.unlock();
         return fd;
     }
