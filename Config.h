@@ -10,7 +10,7 @@ class Config{
     //日志模式,同步到标准输出流/异步到文件,默认同步
     bool asynclogging=false;
     //日志级别,TRACE DEBUG INFO （前三级可过滤）ERROR WARN FATAL 
-    int logLevel_=3;
+    int logLevel_=2;
     //使用epoll模式还是poll模式,默认epoll
     bool mode=true;
     //服务器名称

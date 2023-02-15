@@ -121,6 +121,7 @@ int HttpServer::fileOpenCallback(std::string& filename){
         if(files_.find(filename)==files_.end()){
             fd=open(filename.c_str(), O_RDONLY | O_NONBLOCK, "rb");
             files_[filename]=fd;
+            LOG_INFO<<"Open new file.Filename is "<<filename<<".\n";
         }
         else fd=files_[filename];
         lock.unlock();

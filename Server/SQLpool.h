@@ -2,13 +2,14 @@
 #define XSQLPOOL_H
 #include<pthread.h>
 #include<memory>
-#include<list>
+#include<vector>
 #include<string>
 #include"Lock.h"
 //单例模式实现连接池,基于list分配连接
 
 class SQLConnection;
 class SQLpool{
+    using SqlPtr = std::unique_ptr<SQLConnection>;
     public:
     //设置连接池大小
     static void setPoolSize(int num){
@@ -28,15 +29,17 @@ class SQLpool{
         return &pool;
     }
     //获取目前可用的连接
-    SQLConnection* getConnection();
+    SqlPtr getConnection();
     //释放连接，返回连接池
-    void releaseConnection(SQLConnection*);
+    void releaseConnection(SqlPtr);
     private:
     //初始化连接池
     SQLpool();
     ~SQLpool();
     //用链表组织数据库连接
-    std::list<SQLConnection*>conns_;
+    //std::list<SQLConnection*>conns_;
+    //unique_ptr管理sql连接
+    std::vector<SqlPtr>conns_;
     //互斥获取/释放连接
     MutexLock mutex;
     Condition cond;

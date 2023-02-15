@@ -1,7 +1,7 @@
 #调试，若不需要调试则注释
 CPPFLAGS+=-g
 
-#目标文件从当前目录和VPATH指定子目录中寻找
+#目标文件从当前目录和指定子目录中寻找
 OBJ=$(wildcard *.cpp) $(wildcard Server/*.cpp) $(wildcard Log/*.cpp)
 
 all:XWebServer 

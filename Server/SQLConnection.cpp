@@ -36,7 +36,7 @@ Query::~Query()
         {
             mysql_free_result(conn_->result_);
             conn_->result_=NULL;
-            pool_->releaseConnection(conn_);
+            pool_->releaseConnection(std::move(conn_));
         }
     }
 }

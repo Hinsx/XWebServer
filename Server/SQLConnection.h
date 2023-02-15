@@ -2,6 +2,7 @@
 #define XSQLCONNECTION_H
 #include<mysql/mysql.h>
 #include<string>
+#include<memory>
 
 class SQLpool;
 class Query;
@@ -21,6 +22,7 @@ class SQLConnection{
 };
 //用于语句执行，避免直接释放MYSQL_RES*,创建时从连接池中获取连接，析构时归还连接
 class Query{
+    using SqlPtr=std::unique_ptr<SQLConnection>;
     public:
     Query();
     //执行sql语句，返回结果集大小,result设置为指向结果集
@@ -29,7 +31,7 @@ class Query{
     //判断是否获取连接
     bool getConnection(){return conn_!=nullptr;}
     private:
-    SQLConnection* conn_;
+    SqlPtr conn_;
     SQLpool* pool_;
 };
 

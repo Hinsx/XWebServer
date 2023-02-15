@@ -14,49 +14,47 @@ SQLpool::SQLpool() : cond(mutex)
 {
     for (int i = ConnectionNums_; i >= 0; i--)
     {
-        conns_.push_back(new SQLConnection(host_, user_, passwd_, db_name_));
+        conns_.push_back(std::make_unique<SQLConnection>(host_, user_, passwd_, db_name_));
     }
     LOG_TRACE<<"SQLpool create sccussfully.";
 }
 
-SQLConnection *SQLpool::getConnection()
+SQLpool::SqlPtr SQLpool::getConnection()
 {
     {
         MutexLockGuard guard(mutex);
         //尝试获取一个连接
-        if (conns_.empty())
+        if(conns_.empty())
         {
-            //获取失败，等待10ms
-            cond.waitForSeconds(0.01);
+            //获取失败，等待100ms,
+            cond.waitForSeconds(0.1);
+            //cond.wait();
         }
         //等待超时,返回空指针
         if (conns_.empty())
         {
             return nullptr;
         }
-        SQLConnection *conn = conns_.back();
+        //成功获取
+        SqlPtr conn = std::move(conns_.back());
         conns_.pop_back();
         return conn;
     }
 }
 
-void SQLpool::releaseConnection(SQLConnection *conn)
+void SQLpool::releaseConnection(SqlPtr conn)
 {
     if (conn != nullptr)
     {
         {
             MutexLockGuard guard(mutex);
-            conns_.push_back(conn);
+            conns_.push_back(std::move(conn));
+            cond.notify();
         }
     }
 }
 
 SQLpool::~SQLpool()
 {
-    for (int i = ConnectionNums_; i >= 0; i--)
-    {
-        SQLConnection *conn = conns_.back();
-        delete conn;
-        conns_.pop_back();
-    }
+    //nothing to do
 }

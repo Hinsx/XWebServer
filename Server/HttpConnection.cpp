@@ -112,6 +112,7 @@ void handlePOST(const HttpRequest &req, HttpResponse &response)
         MYSQL_RES *result;
         int row = -1;
         {
+            //阻塞获取连接
             Query query;
             if (query.getConnection())
             {
@@ -130,7 +131,7 @@ void handlePOST(const HttpRequest &req, HttpResponse &response)
             response.setStatusMessage("Service Unavailable");
         }
         //已执行注册，返回登录界面
-        else if (row == 0)
+        if (row == 0)
         {
             response.setStatusCode(HttpResponse::k200Ok);
             response.setStatusMessage("OK");
@@ -155,7 +156,7 @@ void handlePOST(const HttpRequest &req, HttpResponse &response)
         int row = -1;
         {
             Query query;
-            if (query.getConnection())
+            //if (query.getConnection())
             {
                 row = query.query(result, "SELECT user_name FROM users WHERE user_name='" + req.getValueByKey("name") + "' AND user_passwd='" + req.getValueByKey("password") + "';");
             }
