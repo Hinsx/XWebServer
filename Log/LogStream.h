@@ -39,7 +39,12 @@ namespace detail
 
     char *current() { return cur_; }
     //返回剩余空缓冲区长度
-    int avail() const { return static_cast<int>(end() - cur_); }
+    int avail() const 
+    { 
+      const char* ed=end();
+
+      return static_cast<int>(ed - cur_); 
+    }
     void add(size_t len) { cur_ += len; }
 
     //重置缓冲区
@@ -48,6 +53,10 @@ namespace detail
 
     FixedBuffer(const FixedBuffer &) = delete;
     FixedBuffer &operator=(const FixedBuffer &) = delete;
+    ~FixedBuffer()
+    {
+      int a=1;
+    }
 
   private:
     const char *end() const { return data_ + sizeof data_; }

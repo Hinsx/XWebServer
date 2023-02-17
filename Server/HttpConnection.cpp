@@ -66,24 +66,10 @@ void acquireFile(HttpResponse &response, std::string &filename)
     {
         response.setStatusCode(HttpResponse::k200Ok);
         response.setStatusMessage("OK");
-        // response.setContentType("image/jpeg");
-        setContentType(response, filename);
         response.addHeader("Server", "xWebServer");
-        //response.setFile(filename, attribute.st_size);
+        setContentType(response, filename);
         int filefd=HttpConnection::getFileFd(filename);
         response.setFile(filefd, attribute.st_size);
-        //response.setFile(-1, 0);
-        // //读取文件到body
-        // FILE* file=fopen(filename.c_str(),"rb");
-        // char output[buf.st_size+1];
-        // string body;
-        // while(!feof(file))
-        // {
-        //     memset(output,'\0',sizeof(output));
-        //     size_t n=fread(output,sizeof(char),sizeof(output)-1,file);
-        //     response.appendToBody(output,n);
-        // }
-        // fclose(file);
     }
 }
 
@@ -92,11 +78,17 @@ void handleGET(const HttpRequest &req, HttpResponse &response)
 {
     //访问的文件
     std::string filename(FILE_PATH);
-    //访问首页
+    //访问首页,若是直接使用ip:port形式，则收到“/”。第二个条件用于性能测试。
     if (req.path() == "/" || req.path() == "http://120.76.192.202:9006/")
     {
+    //如果开启BLANK_RESPONSE，则回复简单html，用于性能测试
+    #ifndef BLANK_RESPONSE
         filename += "/login.html";
+    #else
+        filename += "/simple.html";
+    #endif
     }
+    
     else
     {
         filename += req.path();

@@ -50,7 +50,7 @@ class AsyncLogging{
 
   typedef detail::FixedBuffer<detail::kLargeBuffer> Buffer;
   typedef std::vector<std::unique_ptr<Buffer>> BufferVector;
-  typedef BufferVector::value_type BufferPtr;
+  typedef std::unique_ptr<Buffer> BufferPtr;
 
   //获取前端buffer的时间间隔，防止写入消息过少导致长时间没有信息写入日志文件，即刷新缓冲区
   const int flushInterval_;

@@ -3,7 +3,7 @@
 #include"Server/EventLoop.h"
 #include"Log/Logger.h"
 #include"Log/AsyncLogging.h"
-#include"Config.h"
+#include"Server/Config.h"
 #include"Server/SQLpool.h"
 using namespace std;
 //全局变量，文件路径

@@ -19,6 +19,10 @@ AsyncLogging::AsyncLogging(const string& basename,
     nextBuffer_(new Buffer),
     buffers_()
 {
+  if(currentBuffer_==nullptr)
+  {
+    currentBuffer_=nullptr;
+  }
   currentBuffer_->bzero();
   nextBuffer_->bzero();
   buffers_.reserve(16);
@@ -29,6 +33,10 @@ void AsyncLogging::append(const char* logline, int len)
 {
   //后端也会争用buffer，互斥锁保护临界区
   MutexLockGuard lock(mutex_);
+  if(currentBuffer_==nullptr)
+  {
+    currentBuffer_=nullptr;
+  }
   if (currentBuffer_->avail() > len)
   {
     currentBuffer_->append(logline, len);
@@ -88,7 +96,8 @@ void AsyncLogging::threadFunc()
       //前端写入信息量少，没有触发push_back
       if (buffers_.empty())  // unusual usage!
       {
-        cond_.waitForSeconds(flushInterval_);
+        //cond_.waitForSeconds(flushInterval_);
+        cond_.wait();
       }
       //当buffer不为空或者超时，收集前端未满（正在记录）的buffer
       buffers_.push_back(std::move(currentBuffer_));
@@ -101,6 +110,10 @@ void AsyncLogging::threadFunc()
       {
         //二层缓冲
         nextBuffer_ = std::move(newBuffer2);
+      }
+      if(currentBuffer_==nullptr)
+      {
+      currentBuffer_=nullptr;
       }
     }//临界区结束
 
@@ -136,6 +149,10 @@ void AsyncLogging::threadFunc()
       buffersToWrite.pop_back();
       newBuffer1->reset();
     }
+    if(currentBuffer_==nullptr)
+      {
+      currentBuffer_=nullptr;
+      }
     //回收
     if (!newBuffer2)
     {
@@ -144,6 +161,10 @@ void AsyncLogging::threadFunc()
       buffersToWrite.pop_back();
       newBuffer2->reset();
     }
+    if(currentBuffer_==nullptr)
+      {
+      currentBuffer_=nullptr;
+      }
 
     buffersToWrite.clear();
     output.flush();
