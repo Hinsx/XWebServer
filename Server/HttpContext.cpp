@@ -1,7 +1,10 @@
 
 #include "Buffer.h"
 #include "HttpContext.h"
-
+#ifdef MYTRACE
+#include<iostream>
+using std::cout;
+#endif
 #include<algorithm>
 
 bool HttpContext::processRequestLine(const char* begin, const char* end)
@@ -57,11 +60,20 @@ bool HttpContext::parseRequest(Buffer* buf)
 {
   bool ok = true;
   bool hasMore = true;
+  #ifdef MYTRACE
+  cout<<"**************show the raw data****************.\n";
+  buf-> printBuffer();
+  cout<<"*********************end***********************.\n";
+  #endif 
+
   while (hasMore)
   {
     //当前需要解析请求行
     if (state_ == kExpectRequestLine)
     {
+      #ifdef MYTRACE
+        cout<<"Expect the RequestLine.\n";
+      #endif 
       const char* crlf = buf->findCRLF();
       if (crlf)
       {
@@ -72,6 +84,9 @@ bool HttpContext::parseRequest(Buffer* buf)
           //只有成功解析请求行，readerIndex才会移动
           buf->retrieveUntil(crlf + 2);
           state_ = kExpectHeaders;
+          #ifdef MYTRACE
+          cout<<"Successfully parsed the RequestLine.\n";
+          #endif 
         }
         else
         {
@@ -87,6 +102,9 @@ bool HttpContext::parseRequest(Buffer* buf)
     //当前需要解析请求头
     else if (state_ == kExpectHeaders)
     {
+      #ifdef MYTRACE
+        cout<<"Expect the Headers.\n";
+      #endif 
       //首先找到一个请求头的末尾
       const char* crlf = buf->findCRLF();
       if (crlf)
@@ -102,8 +120,11 @@ bool HttpContext::parseRequest(Buffer* buf)
           if(request_.methodString()=="GET"){
             state_=kGotAll;
             hasMore=false;
+            #ifdef MYTRACE
+            cout<<"Successfully parsed the GET Header.\n";
+            #endif 
           }
-          state_ = kExpectBody;
+          else state_ = kExpectBody;
         }
         //只有找到回车换行（找到一个头部字段），readerIndex才会移动
         buf->retrieveUntil(crlf + 2);
@@ -117,6 +138,9 @@ bool HttpContext::parseRequest(Buffer* buf)
     //解析报文体,根据content-lenght字段解析报文体
     else if (state_ == kExpectBody)
     {
+      #ifdef MYTRACE
+        cout<<"Expect the Body.\n";
+      #endif 
       //计算包体的长度
       const std::string& lenght_str=request_.getHeader("Content-Length");
       int lenght=0;

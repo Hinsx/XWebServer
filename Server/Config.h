@@ -7,7 +7,7 @@ class Config
 {
 private:
     // io线程数量(从reactor数量)
-    int threadNum_ = 3;
+    int threadNum_ = 2;
     // 数据库连接池数量
     int sqlConnectionNums_ = 3;
     // 日志模式,同步到标准输出流/异步到文件,默认同步

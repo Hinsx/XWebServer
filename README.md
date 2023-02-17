@@ -4,9 +4,9 @@
 mkdir build
 cd build/
 ```
-默认开启Debug编译，可以通过DCMAKE_BUILD_TYPE选择其他方式编译，如使用release编译。(todo:使用release编译将无法响应请求)
+默认使用Release模式编译，可以通过DCMAKE_BUILD_TYPE选择其他方式编译，如使用Debug编译。(todo:使用release编译将无法响应请求)
 ```shell
-cmake -DCMAKE_BUILD_TYPE=Release ..
+cmake -DCMAKE_BUILD_TYPE=Debug ..
 ```
 可以开启BILANK_RESPONSE以便服务器性能测试，开启后服务器只会响应小html文件。
 ```shell

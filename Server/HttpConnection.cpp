@@ -7,6 +7,10 @@
 #include <unistd.h>
 #include <sys/stat.h>
 
+#ifdef MYTRACE
+#include<iostream>
+using std::cout;
+#endif
 extern const char *FILE_PATH;
 HttpConnection::FileOpenCallback HttpConnection::openCallback_;
 
@@ -39,6 +43,9 @@ void setContentType(HttpResponse &response, const string &filename)
 //请求文件
 void acquireFile(HttpResponse &response, std::string &filename)
 {
+    #ifdef MYTRACE
+    cout<<"The path of required file is "<<filename<<"\n";
+    #endif
     //检查访问的文件的属性
     struct stat attribute;
 
@@ -76,6 +83,9 @@ void acquireFile(HttpResponse &response, std::string &filename)
 //处理GET请求
 void handleGET(const HttpRequest &req, HttpResponse &response)
 {
+    #ifdef MYTRACE
+    cout<<"Receive the get requestion.\n";
+    #endif
     //访问的文件
     std::string filename(FILE_PATH);
     //访问首页,若是直接使用ip:port形式，则收到“/”。第二个条件用于性能测试。
@@ -186,6 +196,9 @@ void handlePOST(const HttpRequest &req, HttpResponse &response)
 //处理各种请求
 void handleReq(const HttpRequest &req, HttpResponse &response)
 {
+    #ifdef MYTRACE
+    cout<<"Receive the requestion.\n";
+    #endif
     if (req.methodString() == "GET")
     {
         handleGET(req, response);
@@ -254,18 +267,27 @@ void HttpConnection::handleClose()
 //不可能，写端挂起（发fin），首先就需要对方写缓冲区全部发出后，再发一个fin报文，若fin先于部分数据到达，因为tcp报文有先后顺序，会先排序再交给应用层，所以fin会等到所有报文数据到达再被读取
 void HttpConnection::handleRead()
 {
+    #ifdef MYTRACE
+    cout<<"receive the raw data.\n";
+    #endif
     int savedErrno = 0;
     ssize_t n = inputBuffer_.readFd(channel_->fd(), &savedErrno);
 
     //读取到报文目前全部数据，执行解析
     if (n > 0)
     {
+        #ifdef MYTRACE
+        cout<<"successfully read the raw data.\n";
+        #endif
         //有数据到来则更新定时器
         messageCallback_(shared_from_this());
         //printf("%s", inputBuffer_.peek());
         //解析失败，报文格式错误（若是因为报文不完整，n<0，不会进入此分支）
         if (!context_.parseRequest(&inputBuffer_))
         {
+            #ifdef MYTRACE
+            cout<<"error requestion format.\n";
+            #endif 
 
             send("HTTP/1.1 400 Bad Request\r\n\r\n");
             //具体逻辑是什么？
@@ -274,7 +296,9 @@ void HttpConnection::handleRead()
         //解析成功
         if (context_.gotAll())
         {
-
+            #ifdef MYTRACE
+            cout<<"successfully pased the data.\n";
+            #endif    
             const HttpRequest &req = context_.request();
             //获取连接状态（长连接/短连接）
             // http1.1,默认开启长连接，关闭短连接需要额外加入报文头部字段"Connection:close"字段
@@ -310,16 +334,28 @@ void HttpConnection::handleRead()
             //清空报文，等待下一个报文
             context_.reset();
         }
+        else
+        {
+            #ifdef MYTRACE
+            cout<<"the data is not intact.\n";
+            #endif 
+        }
     }
     // POLLRDHUP
     else if (n == 0)
     {
+        #ifdef MYTRACE
+        cout<<"Peer shut write down.\n";
+        #endif
         LOG_TRACE << "Peer shut write down.";
         handleClose();
     }
     //发生错误(不是EAGAIN这类错误，因为通知有数据到达)
     else
     {
+        #ifdef MYTRACE
+        cout<<"something wrong when reading datas from fd.\n";
+        #endif
         errno = savedErrno;
         // LOG_SYSERR << "something wrong when reading datas from fd";
         handleError();

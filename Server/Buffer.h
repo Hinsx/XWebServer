@@ -7,6 +7,11 @@
 #include <string.h>
 #include <algorithm>
 
+
+#include<iostream>
+using std::cout;
+
+
 /*
 封装从socket读取/输出数据的细节，包括寻找CLR
 使用vector作为核心，使用readerIndex和writerIndex，将buffer分为三部分
@@ -50,6 +55,16 @@ public:
     {
         return begin() + readerIndex_;
     }
+
+    void printBuffer() const
+    {
+        //cout<<"There are "<<writerIndex_-8<<" chars.\n";
+        for(int i=8;i<writerIndex_;i++)
+        {
+            cout<<buffer_[i];
+        }
+
+    } 
 
     //寻找\r\n
     const char *findCRLF() const

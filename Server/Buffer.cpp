@@ -8,6 +8,11 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
+#ifdef MYTRACE
+#include<iostream>
+using std::cout;
+#endif
+
 const char Buffer::kCRLF[] = "\r\n";
 
 const int Buffer::kPreBytes;
@@ -26,7 +31,9 @@ ssize_t Buffer::readFd(int fd, int *savedErrno)
   const int iovcnt = (writable < sizeof extrabuf) ? 2 : 1;
   //分散读
   const ssize_t n = readv(fd, vec, iovcnt);
-
+  #ifdef MYTRACE
+  cout<<"Read "<<n<<" bytys data.\n";
+  #endif
   //无法读取（不会是EAGAIN错误，因为提示有数据可读了）
   if (n < 0)
   {

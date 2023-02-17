@@ -3,6 +3,12 @@
 #include <iostream>
 #include "EventLoop.h"
 #include"../Log/Logger.h"
+
+#ifdef MYTRACE
+#include <iostream>
+using std::cout;
+#endif
+
 const int Channel::kNoneEvent = 0;
 const int Channel::kReadEvent = POLLIN | POLLPRI;
 const int Channel::kWriteEvent = POLLOUT;

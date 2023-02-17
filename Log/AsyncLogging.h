@@ -10,6 +10,7 @@
 #include<atomic>
 #include<unistd.h>
 
+
 //收集前端信息，输出到磁盘
 class AsyncLogging{
 
@@ -32,7 +33,6 @@ class AsyncLogging{
   void start()
   {
     running_ = true;
-    cond_.notify();
     thread_.start(running_);
   }
   //停止日志线程

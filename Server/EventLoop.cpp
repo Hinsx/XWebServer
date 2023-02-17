@@ -7,6 +7,11 @@
 #include <sys/eventfd.h>
 #include<unistd.h>
 
+#ifdef MYTRACE
+#include<iostream>
+using std::cout;
+#endif
+
 const int kPollTimeMs = 10000;
 int createEventfd(){
   int evtfd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
@@ -58,6 +63,9 @@ void EventLoop::loop()
     //eventHandling_ = true;
     for (Channel* channel : actives_)
     {
+      #ifdef MYTRACE
+      cout<<"Handle the channel.\n";
+      #endif
       channel->handleEvent();
     }
     //eventHandling_ = false;

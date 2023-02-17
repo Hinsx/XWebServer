@@ -7,6 +7,11 @@
 #include<boost/any.hpp>
 #include <fcntl.h>
 
+#ifdef MYTRACE
+#include <iostream>
+using std::cout;
+#endif
+
 HttpServer::HttpServer(EventLoop *loop, std::string name,const char* ip,int port,int idleSeconds,int maxConnectionNums) : loop_(loop),
                                                                         name_(name),
                                                                         //localAddr_("127.0.0.1",1000),
@@ -42,6 +47,9 @@ void HttpServer::newConnnectionCallback(int connfd, InetAddress peerAddr)
 {
     if(connections_.size()<maxConnectionNums_)
     {
+        #ifdef MYTRACE
+        cout<<"New connection came.Connfd = " << connfd<<"\n";
+        #endif
         LOG_TRACE << "New connection came.Connfd = " << connfd;
         EventLoop *ioLoop = pool_->getNextLoop();
         //构造连接名称（key）
