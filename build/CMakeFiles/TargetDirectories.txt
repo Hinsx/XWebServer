@@ -1,9 +1,0 @@
-/home/alkali/cpp/XWebServer/build/CMakeFiles/rebuild_cache.dir
-/home/alkali/cpp/XWebServer/build/CMakeFiles/edit_cache.dir
-/home/alkali/cpp/XWebServer/build/CMakeFiles/XWebServer.dir
-/home/alkali/cpp/XWebServer/build/Log/CMakeFiles/edit_cache.dir
-/home/alkali/cpp/XWebServer/build/Log/CMakeFiles/rebuild_cache.dir
-/home/alkali/cpp/XWebServer/build/Log/CMakeFiles/XWebServer_Log.dir
-/home/alkali/cpp/XWebServer/build/Server/CMakeFiles/rebuild_cache.dir
-/home/alkali/cpp/XWebServer/build/Server/CMakeFiles/edit_cache.dir
-/home/alkali/cpp/XWebServer/build/Server/CMakeFiles/XWebServer_Base.dir

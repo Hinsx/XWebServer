@@ -1,2 +1,0 @@
-/usr/bin/ar qc libXWebServer_Log.a  CMakeFiles/XWebServer_Log.dir/AsyncLogging.cpp.o CMakeFiles/XWebServer_Log.dir/LogFile.cpp.o CMakeFiles/XWebServer_Log.dir/Logger.cpp.o CMakeFiles/XWebServer_Log.dir/LogStream.cpp.o
-/usr/bin/ranlib libXWebServer_Log.a

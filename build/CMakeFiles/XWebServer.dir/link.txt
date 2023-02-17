@@ -1,1 +1,0 @@
-/usr/bin/c++  -g   CMakeFiles/XWebServer.dir/main.cpp.o  -o XWebServer  Server/libXWebServer_Base.a Log/libXWebServer_Log.a -lpthread -lmysqlclient 
