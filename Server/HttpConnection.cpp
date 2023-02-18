@@ -73,10 +73,13 @@ void acquireFile(HttpResponse &response, std::string &filename)
     {
         response.setStatusCode(HttpResponse::k200Ok);
         response.setStatusMessage("OK");
+        //若开启该定义，则只回复响应行
+        #ifndef BLANK_RESPONSE
         response.addHeader("Server", "xWebServer");
         setContentType(response, filename);
         int filefd=HttpConnection::getFileFd(filename);
         response.setFile(filefd, attribute.st_size);
+        #endif
     }
 }
 
@@ -91,12 +94,7 @@ void handleGET(const HttpRequest &req, HttpResponse &response)
     //访问首页,若是直接使用ip:port形式，则收到“/”。第二个条件用于性能测试。
     if (req.path() == "/" || req.path() == "http://120.76.192.202:9006/")
     {
-    //如果开启BLANK_RESPONSE，则回复简单html，用于性能测试
-    #ifndef BLANK_RESPONSE
         filename += "/login.html";
-    #else
-        filename += "/simple.html";
-    #endif
     }
     
     else

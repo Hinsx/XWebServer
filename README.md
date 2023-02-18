@@ -8,7 +8,7 @@ cd build/
 ```shell
 cmake -DCMAKE_BUILD_TYPE=Debug ..
 ```
-可以开启BILANK_RESPONSE以便服务器性能测试，开启后服务器只会响应小html文件。
+可以开启BILANK_RESPONSE以便服务器性能测试，开启后只回复响应行`200 OK`,尽可能减少传输数据量带来的影响。
 ```shell
 cmake -DBLANK_RESPONSE=ON ..
 ```
@@ -63,6 +63,10 @@ Options:
 ## 性能测试
 配置最大同时连接数量为1w，设置日志等级为3，启用异步日志。
 ```shell
+mkdir build
+cd build/
+cmake -DBLANK_RESPONSE=ON ..
+make
 ./XWebServer -s 100000 -l 3 -a 
 ```
 由于测试过程中云服务的远程连接可能断开导致进程终止，需要进行设置，以保证程序能在后台运行。
