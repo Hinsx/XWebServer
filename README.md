@@ -8,7 +8,7 @@ cd build/
 ```shell
 cmake -DCMAKE_BUILD_TYPE=Debug ..
 ```
-可以开启BILANK_RESPONSE以便服务器性能测试，开启后只回复响应行`200 OK`,尽可能减少传输数据量带来的影响。
+可以开启BLANK_RESPONSE以便服务器性能测试，开启后只回复响应行`200 OK`,尽可能减少传输数据量带来的影响。
 ```shell
 cmake -DBLANK_RESPONSE=ON ..
 ```
