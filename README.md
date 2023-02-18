@@ -4,7 +4,7 @@
 mkdir build
 cd build/
 ```
-默认使用Release模式编译，可以通过DCMAKE_BUILD_TYPE选择其他方式编译，如使用Debug编译。(todo:使用release编译将无法响应请求)
+默认使用Release模式编译，可以通过DCMAKE_BUILD_TYPE选择其他方式编译，如使用Debug编译。
 ```shell
 cmake -DCMAKE_BUILD_TYPE=Debug ..
 ```
@@ -12,7 +12,7 @@ cmake -DCMAKE_BUILD_TYPE=Debug ..
 ```shell
 cmake -DBLANK_RESPONSE=ON ..
 ```
-cmake命令执行后build产生多个文件。注意开启cmake编译选项后，下一次cmake编译仍然沿用上一次选项。
+cmake命令执行后build产生多个文件。注意开启cmake编译选项后，下一次cmake编译仍然沿用上一次选项。除非显式指定编译选项。
 ```shell
 make
 ./XWebServer
@@ -31,6 +31,30 @@ Options:
   -w <seconds>       connection idle time
   -s <number>        maximum number of connections
   -q <number>        maximum number of sql connections
+```
+服务器默认配置参数如下
+```cpp
+  //Config.h
+  // io线程数量(从reactor数量)
+  int threadNum_ = 2;
+  // 数据库连接池数量
+  int sqlConnectionNums_ = 3;
+  // 日志模式,同步到标准输出流/异步到文件,默认同步
+  bool asynclogging = false;
+  // 日志级别,TRACE DEBUG INFO （前三级可过滤）ERROR WARN FATAL
+  int logLevel_ = 2;
+  // 使用epoll模式还是poll模式,默认epoll
+  bool mode = true;
+  // 服务器名称
+  std::string name_ = "XWebServer";
+  // 服务器地址,默认绑定到所有网卡
+  char *ip_ = nullptr;
+  // 服务器端口
+  int port_ = 9006;
+  // 空闲连接超时时间
+  int idle_ = 5;
+  // 允许同时处理连接的最大数量
+  int connectionNums_ = 5000;
 ```
 # 性能测试及性能瓶颈
 阿里云轻量服务器是5M带宽，1M即1Mbps，1Mb=1024Kb=1024/8 KB=128KB，1Kb=1024bit，所以`5Mb=5*1024/8 KB=640KB/s`，即每秒传输640KB（5120bit）

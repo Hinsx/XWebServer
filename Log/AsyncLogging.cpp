@@ -22,7 +22,13 @@ AsyncLogging::AsyncLogging(const string& basename,
   currentBuffer_->bzero();
   nextBuffer_->bzero();
   buffers_.reserve(16);
-  Logger::setOutput(std::bind(&AsyncLogging::append,this,std::placeholders::_1,std::placeholders::_2));
+}
+
+void AsyncLogging::start()
+{
+    Logger::setOutput(std::bind(&AsyncLogging::append,this,std::placeholders::_1,std::placeholders::_2));
+    running_ = true;
+    thread_.start(running_);
 }
 
 void AsyncLogging::append(const char* logline, int len)

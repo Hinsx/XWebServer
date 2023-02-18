@@ -30,11 +30,7 @@ class AsyncLogging{
   void append(const char* logline, int len);
 
   //启动日志线程
-  void start()
-  {
-    running_ = true;
-    thread_.start(running_);
-  }
+  void start();
   //停止日志线程
   void stop() 
   {
